@@ -8,7 +8,7 @@ namespace NetLua
 {
     public static class IoLibrary
     {
-        // TODO: implment lines, read
+        // TODO: implement lines, read
         class FileObject
         {
             public FileObject(Stream s)

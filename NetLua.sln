@@ -1,11 +1,11 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLua", "NetLua\NetLua.csproj", "{6B52EB11-E6A7-4771-94B0-7F87EA28211D}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35004.147
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetLua", "NetLua\NetLua.csproj", "{6B52EB11-E6A7-4771-94B0-7F87EA28211D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LuaTest", "LuaTest\LuaTest.csproj", "{265397E0-58C3-444B-9C26-3FA585AADB10}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LuaUnits", "LuaUnits\LuaUnits.csproj", "{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LuaUnits", "LuaUnits\LuaUnits.csproj", "{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,28 +27,23 @@ Global
 		{6B52EB11-E6A7-4771-94B0-7F87EA28211D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{6B52EB11-E6A7-4771-94B0-7F87EA28211D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{6B52EB11-E6A7-4771-94B0-7F87EA28211D}.Release|x86.ActiveCfg = Release|Any CPU
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Debug|x86.ActiveCfg = Debug|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Debug|x86.Build.0 = Debug|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Release|Any CPU.ActiveCfg = Release|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Release|Mixed Platforms.Build.0 = Release|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Release|x86.ActiveCfg = Release|x86
-		{265397E0-58C3-444B-9C26-3FA585AADB10}.Release|x86.Build.0 = Release|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Debug|Any CPU.ActiveCfg = Debug|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Debug|Mixed Platforms.Build.0 = Debug|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Debug|x86.ActiveCfg = Debug|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Debug|x86.Build.0 = Debug|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Release|Any CPU.ActiveCfg = Release|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Release|Mixed Platforms.ActiveCfg = Release|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Release|Mixed Platforms.Build.0 = Release|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Release|x86.ActiveCfg = Release|x86
-		{06793FC0-CF27-4AFD-AB8C-2F938829B8DB}.Release|x86.Build.0 = Release|x86
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Debug|x86.Build.0 = Debug|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|x86.ActiveCfg = Release|Any CPU
+		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BFBD1B41-C037-4A22-99A9-EC3BD31F9BD6}
 	EndGlobalSection
 EndGlobal
