@@ -3,6 +3,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,8 +21,11 @@ namespace LuaUnits
             LuaObject obj1 = 10;
             LuaObject obj2 = 10;
 
-            Assert.IsTrue(obj1.Equals(obj2));
-            Assert.IsTrue(obj2.Equals(obj1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(obj1, Is.EqualTo(obj2));
+                Assert.That(obj2, Is.EqualTo(obj1));
+            });
         }
 
         [Test]
@@ -30,8 +34,11 @@ namespace LuaUnits
             LuaObject obj1 = "test";
             LuaObject obj2 = "test";
 
-            Assert.IsTrue(obj1.Equals(obj2));
-            Assert.IsTrue(obj2.Equals(obj1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(obj1, Is.EqualTo(obj2));
+                Assert.That(obj2, Is.EqualTo(obj1));
+            });
         }
 
         [Test]
@@ -40,16 +47,22 @@ namespace LuaUnits
             LuaObject obj1 = "10";
             LuaObject obj2 = 10;
 
-            Assert.IsFalse(obj1.Equals(obj2));
-            Assert.IsFalse(obj2.Equals(obj1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(obj1, Is.Not.EqualTo(obj2));
+                Assert.That(obj2, Is.Not.EqualTo(obj1));
+            });
         }
 
-        [Test]
-        public static void GeneralEquality()
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("nil")]
+        [TestCase(0d)]
+        public static void GeneralEquality(object? obj)
         {
-            LuaObject a = "test";
+            LuaObject a = LuaObject.FromObject(obj);
 
-            Assert.IsTrue(a == "test");
+            Assert.That(a.Equals(obj), Is.True);
         }
 
         [Test]

@@ -21,7 +21,10 @@ namespace NetLua
             Terminal Identifier = new IdentifierTerminal("identifier");
             Terminal SingleString = new StringLiteral("string", "'", StringOptions.AllowsAllEscapes);
             Terminal DoubleString = new StringLiteral("string", "\"", StringOptions.AllowsAllEscapes);
-            Terminal Number = new NumberLiteral("number", NumberOptions.AllowSign);
+            Terminal Number = new NumberLiteral("number", NumberOptions.AllowSign)
+            {
+                DefaultIntTypes = new TypeCode[] { TypeCode.Int32, TypeCode.Int64 },
+            };
 
             Terminal LineComment = new CommentTerminal("Comment", "--", "\n", "\r");
             Terminal LongComment = new CommentTerminal("LongComment", "--[[", "]]");
@@ -43,6 +46,7 @@ namespace NetLua
             NonTerminal FunctionDef = new NonTerminal("FunctionDef");
             NonTerminal DefArguments = new NonTerminal("FunctionDefArguments");
             NonTerminal DefArgumentsFragment = new NonTerminal("");
+            NonTerminal Varargs = new NonTerminal("Varargs");
 
             NonTerminal Statement = new NonTerminal("Statement");
             NonTerminal ReturnStatement = new NonTerminal("ReturnStat");
@@ -76,7 +80,7 @@ namespace NetLua
 
             CallArguments.Rule = "(" + (CallArgumentsFragment | Empty) + ")";
 
-            DefArgumentsFragment.Rule = Identifier | Identifier + "," + DefArgumentsFragment;
+            DefArgumentsFragment.Rule = Varargs | Identifier | Identifier + "," + DefArgumentsFragment;
 
             DefArguments.Rule = "(" + (DefArgumentsFragment | Empty) + ")";
 
@@ -127,11 +131,10 @@ namespace NetLua
                 ) | Empty;
             TableConstruct.Rule = "{" + TableConstructFragment + "}";
 
-            var varargs = new NonTerminal("Varargs");
-            varargs.Rule = "...";
+            Varargs.Rule = "...";
 
             Expression.Rule =
-                 varargs
+                 Varargs
                 | Prefix
                 | OrOp
                 | UnaryExpr

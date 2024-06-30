@@ -159,7 +159,9 @@ namespace NetLua
     /// <summary>
     /// A Lua object. Can be any of the standard Lua objects
     /// </summary>
-    public class LuaObject : DynamicObject, IEnumerable<KeyValuePair<LuaObject, LuaObject>>
+    public class LuaObject : DynamicObject, 
+        IEnumerable<LuaTableItem>,
+        IEquatable<LuaObject>
     {
         internal object luaobj;
         internal LuaType type;
@@ -626,13 +628,14 @@ namespace NetLua
             return LuaEvents.unm_event(a);
         }
 
-        public IEnumerator<KeyValuePair<LuaObject, LuaObject>> GetEnumerator()
+        public IEnumerator<LuaTableItem> GetEnumerator()
         {
-            var table = luaobj as IEnumerable<KeyValuePair<LuaObject, LuaObject>>;
-            if (table == null)
-                return null;
+            if (luaobj is IEnumerable<LuaTableItem> table)
+            {
+                return table.GetEnumerator();
+            }
 
-            return table.GetEnumerator();
+            throw new LuaException($"[{Type}] LuaObject cannot iterate");
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -692,10 +695,15 @@ namespace NetLua
 
         public override bool Equals(object obj)
         {
-            if (obj is LuaObject)
-                return luaobj.Equals((obj as LuaObject).luaobj);
+            if (obj is LuaObject otherLuaObj)
+                return Equals(otherLuaObj);
             else
-                return luaobj.Equals(obj);
+                return Equals(luaobj, obj);
+        }
+
+        public bool Equals(LuaObject other)
+        {
+            return luaobj.Equals(other.luaobj);
         }
 
         public override int GetHashCode()

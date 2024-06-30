@@ -9,6 +9,7 @@ using System.Text;
 
 using Irony.Parsing;
 using Irony.Ast;
+using System.Diagnostics;
 
 namespace NetLua
 {
@@ -547,7 +548,18 @@ namespace NetLua
                     argsNode = argsNode.ChildNodes[0];
                     while (argsNode.ChildNodes.Count > 0)
                     {
-                        string ident = argsNode.ChildNodes[0].Token.ValueString;
+                        string ident;
+                        var argNode = argsNode.ChildNodes[0];
+                        if (argNode.Token != null)
+                        {
+                            ident = argsNode.ChildNodes[0].Token.ValueString;
+                        }
+                        else
+                        {
+                            Debug.Assert(argNode.Term.Name == "Varargs");
+                            ident = "...";
+                        }
+
                         def.Arguments.Add(new Ast.Argument() { Name = ident });
                         if (argsNode.ChildNodes.Count == 1)
                             break;
@@ -676,7 +688,7 @@ namespace NetLua
                 ParseTreeNode child = node.ChildNodes[0];
                 if (child.Token != null && child.Token.Terminal is NumberLiteral)
                 {
-                    return new Ast.NumberLiteral() { Value = (child.Token.Value is double ? (double)(child.Token.Value) : (int)(child.Token.Value)) };
+                    return new Ast.NumberLiteral() { Value = Convert.ToDouble(child.Token.Value) };
                 }
                 else if (child.Token != null && child.Token.Terminal is StringLiteral)
                 {

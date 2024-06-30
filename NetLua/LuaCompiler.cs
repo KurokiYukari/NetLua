@@ -323,8 +323,17 @@ namespace NetLua
 
             #region Arguments init
             var len = Expression.Property(args, "Length");
-            var argLen = Expression.Constant(func.Arguments.Count);
-            var argCount = Expression.Constant(func.Arguments.Count);
+
+            Expression argLen;
+            if (func.Arguments.Count != 0 && 
+                func.Arguments[func.Arguments.Count - 1].Name == "...")
+            {
+                argLen = Expression.Constant(func.Arguments.Count - 1);
+            }
+            else
+            {
+                argLen = Expression.Constant(func.Arguments.Count);
+            }
 
             var i = Expression.Parameter(typeof(int), "i");
             var assignI = Expression.Assign(i, Expression.Constant(0));
