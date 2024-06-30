@@ -105,17 +105,6 @@ namespace NetLua
             }
         }
 
-        /// <summary>
-        /// The base context
-        /// </summary>
-        public dynamic DynamicContext
-        {
-            get
-            {
-                return ctx;
-            }
-        }
-
         #region Dynamic methods
 
         public override bool TryGetMember(GetMemberBinder binder, out object result)

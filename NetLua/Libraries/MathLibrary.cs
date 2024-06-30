@@ -114,28 +114,28 @@ namespace NetLua
 
         public static void AddMathLibrary(LuaContext Context)
         {
-            dynamic math = LuaObject.NewTable();
-            math.abs = (LuaFunction)math_abs;
-            math.acos = (LuaFunction)math_acos;
-            math.asin = (LuaFunction)math_asin;
-            math.atan = (LuaFunction)math_atan;
-            math.atan2 = (LuaFunction)math_atan2;
-            math.ceil = (LuaFunction)math_ceil;
-            math.cos = (LuaFunction)math_cos;
-            math.cosh = (LuaFunction)math_cosh;
-            math.exp = (LuaFunction)math_exp;
-            math.floor = (LuaFunction)math_floor;
-            math.log = (LuaFunction)math_log;
-            math.max = (LuaFunction)math_max;
-            math.min = (LuaFunction)math_min;
-            math.pow = (LuaFunction)math_pow;
-            math.sin = (LuaFunction)math_sin;
-            math.sinh = (LuaFunction)math_sinh;
-            math.sqrt = (LuaFunction)math_sqrt;
-            math.tan = (LuaFunction)math_tan;
-            math.tanh = (LuaFunction)math_tanh;
+            var math = LuaObject.NewTable();
+            math["abs"] = (LuaFunction)math_abs;
+            math["acos"] = (LuaFunction)math_acos;
+            math["asin"] = (LuaFunction)math_asin;
+            math["atan"] = (LuaFunction)math_atan;
+            math["atan2"] = (LuaFunction)math_atan2;
+            math["ceil"] = (LuaFunction)math_ceil;
+            math["cos"] = (LuaFunction)math_cos;
+            math["cosh"] = (LuaFunction)math_cosh;
+            math["exp"] = (LuaFunction)math_exp;
+            math["floor"] = (LuaFunction)math_floor;
+            math["log"] = (LuaFunction)math_log;
+            math["max"] = (LuaFunction)math_max;
+            math["min"] = (LuaFunction)math_min;
+            math["pow"] = (LuaFunction)math_pow;
+            math["sin"] = (LuaFunction)math_sin;
+            math["sinh"] = (LuaFunction)math_sinh;
+            math["sqrt"] = (LuaFunction)math_sqrt;
+            math["tan"] = (LuaFunction)math_tan;
+            math["tanh"] = (LuaFunction)math_tanh;
 
-            math.pi = Math.PI;
+            math["pi"] = Math.PI;
 
             Context.Set("math", math);
         }

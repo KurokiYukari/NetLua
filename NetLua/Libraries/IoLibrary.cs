@@ -25,7 +25,7 @@ namespace NetLua
             public StreamWriter writer;
         }
 
-        static dynamic FileMetatable = LuaObject.NewTable();
+        static LuaObject FileMetatable = LuaObject.NewTable();
 
         static LuaObject currentInput = LuaObject.Nil, currentOutput = LuaObject.Nil;
 
@@ -54,29 +54,31 @@ namespace NetLua
 
         public static void AddIoLibrary(LuaContext Context)
         {
-            dynamic io = LuaObject.NewTable();
+            var io = LuaObject.NewTable();
 
-            FileMetatable.__index = LuaObject.NewTable();
-            FileMetatable.__index.write = (LuaFunction)write;
-            FileMetatable.__index.close = (LuaFunction)close;
-            FileMetatable.__index.flush = (LuaFunction)flush;
-            FileMetatable.__index.seek = (LuaFunction)seek;
-            FileMetatable.__index.read = (LuaFunction)read;
+            var __index = LuaObject.NewTable();
+            FileMetatable["__index"] = __index;
 
-            io.open = (LuaFunction)io_open;
-            io.type = (LuaFunction)io_type;
-            io.input = (LuaFunction)io_input;
-            io.output = (LuaFunction)io_output;
-            io.temp = (LuaFunction)io_temp;
-            io.flush = (LuaFunction)io_flush;
-            io.write = (LuaFunction)io_write;
-            io.read = (LuaFunction)io_read;
+            __index["write"] = (LuaFunction)write;
+            __index["close"] = (LuaFunction)close;
+            __index["flush"] = (LuaFunction)flush;
+            __index["flush"] = (LuaFunction)seek;
+            __index["flush"] = (LuaFunction)read;
+
+            io["open"] = (LuaFunction)io_open;
+            io["type"] = (LuaFunction)io_type;
+            io["input"] = (LuaFunction)io_input;
+            io["output"] = (LuaFunction)io_output;
+            io["temp"] = (LuaFunction)io_temp;
+            io["flush"] = (LuaFunction)io_flush;
+            io["write"] = (LuaFunction)io_write;
+            io["read"] = (LuaFunction)io_read;
 
             currentInput = CreateFileObject(Console.OpenStandardInput());
             currentOutput = CreateFileObject(Console.OpenStandardOutput(), true);
-            io.stdin = currentInput;
-            io.stdout = currentOutput;
-            io.stderr = CreateFileObject(Console.OpenStandardError(), true);
+            io["stdin"] = currentInput;
+            io["stdout"] = currentOutput;
+            io["stderr"] = CreateFileObject(Console.OpenStandardError(), true);
 
             Context.Set("io", io);
         }
