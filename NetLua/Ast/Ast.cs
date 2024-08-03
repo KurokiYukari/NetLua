@@ -41,14 +41,20 @@ namespace NetLua.Ast
         Equal,
         Different,
         And,
-        Or
+        Or,
+        BitwiseLeftShift,
+        BitwiseRightShift,
+        BitwiseAnd,
+        BitwiseExclusiveOr,
+        BitwiseOr
     }
 
     public enum UnaryOp
     {
         Negate,
         Invert,
-        Length
+        Length,
+        BitwiseNot
     }
 
     public interface IVisitable

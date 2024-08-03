@@ -90,7 +90,7 @@ namespace NetLua
             if (node.Term.Name == "RelOp")
             {
                 ParseTreeNode left = node.ChildNodes[0];
-                Ast.IExpression lexpr = ParseConcatOp(left);
+                Ast.IExpression lexpr = ParseBitwiseOrOp(left);
                 if (node.ChildNodes[1].ChildNodes.Count == 0)
                     return lexpr;
                 string opstring = node.ChildNodes[1].ChildNodes[0].ChildNodes[0].Token.ValueString;
@@ -114,11 +114,87 @@ namespace NetLua
                 }
 
                 ParseTreeNode right = node.ChildNodes[1].ChildNodes[1];
-                Ast.IExpression rexpr = ParseConcatOp(right);
+                Ast.IExpression rexpr = ParseBitwiseOrOp(right);
 
                 return new Ast.BinaryExpression() { Left = lexpr, Right = rexpr, Operation = op };
             }
             throw new Exception("Invalid RelOp node");
+        }
+
+        Ast.IExpression ParseBitwiseOrOp(ParseTreeNode node)
+        {
+            if (node.Term.Name == "BitwiseOrOp")
+            {
+                ParseTreeNode left = node.ChildNodes[0];
+                Ast.IExpression lexpr = ParseBitwiseExclusiveOrOp(left);
+                if (node.ChildNodes[1].ChildNodes.Count == 0)
+                    return lexpr;
+                ParseTreeNode right = node.ChildNodes[1].ChildNodes[1];
+                Ast.IExpression rexpr = ParseBitwiseExclusiveOrOp(right);
+
+                return new Ast.BinaryExpression() { Left = lexpr, Right = rexpr, Operation = Ast.BinaryOp.BitwiseOr };
+            }
+            throw new Exception("Invalid BitwiseOr node");
+        }
+
+        Ast.IExpression ParseBitwiseExclusiveOrOp(ParseTreeNode node)
+        {
+            if (node.Term.Name == "BitwiseExclusiveOrOp")
+            {
+                ParseTreeNode left = node.ChildNodes[0];
+                Ast.IExpression lexpr = ParseBitwiseAndOp(left);
+                if (node.ChildNodes[1].ChildNodes.Count == 0)
+                    return lexpr;
+                ParseTreeNode right = node.ChildNodes[1].ChildNodes[1];
+                Ast.IExpression rexpr = ParseBitwiseAndOp(right);
+
+                return new Ast.BinaryExpression() { Left = lexpr, Right = rexpr, Operation = Ast.BinaryOp.BitwiseExclusiveOr };
+            }
+            throw new Exception("Invalid BitwiseExclusiveOr node");
+        }
+
+        Ast.IExpression ParseBitwiseAndOp(ParseTreeNode node)
+        {
+            if (node.Term.Name == "BitwiseAndOp")
+            {
+                ParseTreeNode left = node.ChildNodes[0];
+                Ast.IExpression lexpr = ParseBitwiseShiftOp(left);
+                if (node.ChildNodes[1].ChildNodes.Count == 0)
+                    return lexpr;
+                ParseTreeNode right = node.ChildNodes[1].ChildNodes[1];
+                Ast.IExpression rexpr = ParseBitwiseShiftOp(right);
+
+                return new Ast.BinaryExpression() { Left = lexpr, Right = rexpr, Operation = Ast.BinaryOp.BitwiseAnd };
+            }
+            throw new Exception("Invalid BitwiseAnd node");
+        }
+
+        Ast.IExpression ParseBitwiseShiftOp(ParseTreeNode node)
+        {
+            if (node.Term.Name == "BitwiseShiftOp")
+            {
+                ParseTreeNode left = node.ChildNodes[0];
+                Ast.IExpression lexpr = ParseConcatOp(left);
+                if (node.ChildNodes[1].ChildNodes.Count == 0)
+                    return lexpr;
+                string opstring = node.ChildNodes[1].ChildNodes[0].ChildNodes[0].Token.ValueString;
+                Ast.BinaryOp op;
+                switch (opstring)
+                {
+                    case "<<":
+                        op = Ast.BinaryOp.BitwiseLeftShift; break;
+                    case ">>":
+                        op = Ast.BinaryOp.BitwiseRightShift; break;
+                    default:
+                        throw new Exception("Invalid operator");
+                }
+
+                ParseTreeNode right = node.ChildNodes[1].ChildNodes[1];
+                Ast.IExpression rexpr = ParseConcatOp(right);
+
+                return new Ast.BinaryExpression() { Left = lexpr, Right = rexpr, Operation = op };
+            }
+            throw new Exception("Invalid ConcatOp node");
         }
 
         Ast.IExpression ParseConcatOp(ParseTreeNode node)
@@ -519,6 +595,8 @@ namespace NetLua
                         op = Ast.UnaryOp.Invert; break;
                     case "#":
                         op = Ast.UnaryOp.Length; break;
+                    case "~":
+                        op = Ast.UnaryOp.BitwiseNot; break;
                 }
                 return new Ast.UnaryExpression()
                 {

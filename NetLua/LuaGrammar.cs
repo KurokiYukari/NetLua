@@ -66,6 +66,10 @@ namespace NetLua
             NonTerminal MulOp = new NonTerminal("MulOp");
             NonTerminal AddOp = new NonTerminal("AddOp");
             NonTerminal ConcatOp = new NonTerminal("ConcatOp");
+            NonTerminal BitwiseShiftOp = new NonTerminal("BitwiseShiftOp");
+            NonTerminal BitwiseAndOp = new NonTerminal("BitwiseAndOp");
+            NonTerminal BitwiseExclusiveOrOp = new NonTerminal("BitwiseExclusiveOrOp");
+            NonTerminal BitwiseOrOp = new NonTerminal("BitwiseOrOp");
             NonTerminal RelOp = new NonTerminal("RelOp");
             NonTerminal AndOp = new NonTerminal("AndOp");
             NonTerminal OrOp = new NonTerminal("OrOp");
@@ -89,14 +93,19 @@ namespace NetLua
 
             #region Expressions
             PowerOp.Rule = Expression + ("^" + Expression | Empty);
+            // TODO: Op 'floor division //'
             MulOp.Rule = PowerOp + ((ToTerm("*") | "/" | "%") + PowerOp | Empty);
             AddOp.Rule = MulOp + ((ToTerm("+") | "-") + MulOp | Empty);
             ConcatOp.Rule = AddOp + (".." + AddOp | Empty);
-            RelOp.Rule = ConcatOp + ((ToTerm(">") | ">=" | "<" | "<=" | "==" | "~=") + ConcatOp | Empty);
+            BitwiseShiftOp.Rule = ConcatOp + ((ToTerm("<<") | ">>") + ConcatOp | Empty);
+            BitwiseAndOp.Rule = BitwiseShiftOp + (ToTerm("&") + BitwiseShiftOp | Empty);
+            BitwiseExclusiveOrOp.Rule = BitwiseAndOp + (ToTerm("~") + BitwiseAndOp | Empty);
+            BitwiseOrOp.Rule = BitwiseExclusiveOrOp + (ToTerm("|") + BitwiseExclusiveOrOp | Empty);
+            RelOp.Rule = BitwiseOrOp + ((ToTerm(">") | ">=" | "<" | "<=" | "==" | "~=") + BitwiseOrOp | Empty);
             AndOp.Rule = RelOp + ("and" + RelOp | Empty);
             OrOp.Rule = AndOp + ("or" + AndOp | Empty);
 
-            UnaryExpr.Rule = (ToTerm("not") | "-" | "#") + Expression;
+            UnaryExpr.Rule = (ToTerm("not") | "-" | "#" | "~") + Expression;
 
             Prefix.Rule =
                 OopCall

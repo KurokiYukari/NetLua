@@ -309,6 +309,16 @@ namespace NetLua
             return obj.AsBool();
         }
 
+        public static bool operator true(LuaObject obj)
+        {
+            return obj.AsBool();
+        }
+
+        public static bool operator false(LuaObject obj)
+        {
+            return !obj.AsBool();
+        }
+
         /// <summary>
         /// Gets whether this is a boolean object
         /// </summary>
@@ -363,6 +373,22 @@ namespace NetLua
         public double AsNumber()
         {
             return (double)luaobj;
+        }
+
+        public bool TryConvertToInt(out int value)
+        {
+            if (IsNumber)
+            {
+                var dValue = AsNumber();
+                value = (int)dValue;
+                if (dValue - value < 0.00001d)
+                {
+                    return true;
+                }
+            }
+
+            value = 0;
+            return false;
         }
         #endregion
 
@@ -491,8 +517,20 @@ namespace NetLua
         public object AsUserData()
         {
             return luaobj;
-        }
+        } 
         #endregion
+
+        public static LuaObject operator !(LuaObject a)
+        {
+            if (!a.AsBool())
+            {
+                return True;
+            }
+            else
+            {
+                return False;
+            }
+        }
 
         public static LuaObject operator +(LuaObject a, LuaObject b)
         {
@@ -519,10 +557,70 @@ namespace NetLua
             return LuaEvents.mod_event(a, b);
         }
 
+        // LuaEvents.pow
+        //public static LuaObject operator **(LuaObject a, LuaObject b)
+        //{
+        //    return LuaEvents.pow_event(a, b);
+        //}
+
+        public static LuaObject operator -(LuaObject a)
+        {
+            return LuaEvents.unm_event(a);
+        }
+
+        public static LuaObject operator &(LuaObject a, LuaObject b)
+        {
+            a ??= Nil;
+            b ??= Nil;
+            if (LuaEvents.TryInvoke_band_event(a, b, out var result))
+            {
+                return result;
+            }
+
+            if (a.IsNil || !a.AsBool())
+                return a;
+            else
+            {
+                return b;
+            }
+        }
+
+        public static LuaObject operator |(LuaObject a, LuaObject b)
+        {
+            a ??= Nil;
+            b ??= Nil;
+            if (LuaEvents.TryInvoke_bor_event(a, b, out var result))
+            {
+                return result;
+            }
+
+            if (a.IsNil || !a.AsBool())
+            {
+                return b;
+            }
+            else
+                return a;
+        }
+
         public static LuaObject operator ^(LuaObject a, LuaObject b)
         {
-            return LuaEvents.pow_event(a, b);
+            return LuaEvents.bxor_event(a, b);
         }
+
+        public static LuaObject operator ~(LuaObject a)
+        {
+            return LuaEvents.bnot_event(a);
+        }
+
+        //public static LuaObject operator <<(LuaObject a, int b)
+        //{
+        //    return LuaEvents.shl_event(a, b);
+        //}
+
+        //public static LuaObject operator >>(LuaObject a, int b)
+        //{
+        //    return LuaEvents.shr_event(a, b);
+        //}
 
         public static LuaObject operator <(LuaObject a, LuaObject b)
         {
@@ -549,7 +647,7 @@ namespace NetLua
             if (b == null)
                 return LuaObject.FromObject(a).IsNil;
 
-            if (a.IsNil)
+            if (a == null || a.IsNil)
             {
                 if (b == null)
                     return true;
@@ -583,49 +681,6 @@ namespace NetLua
         public static bool operator !=(LuaObject a, object b)
         {
             return !(a == b);
-        }
-
-        public static LuaObject operator |(LuaObject a, object b)
-        {
-            if (a.IsNil || !a.AsBool())
-            {
-                if (b is LuaObject)
-                    return b as LuaObject;
-                else
-                    return LuaObject.FromObject(b);
-            }
-            else
-                return a;
-        }
-
-        public static LuaObject operator &(LuaObject a, object b)
-        {
-            if (a.IsNil || !a.AsBool())
-                return a;
-            else
-            {
-                if (b is LuaObject)
-                    return b as LuaObject;
-                else
-                    return LuaObject.FromObject(b);
-            }
-        }
-
-        public static LuaObject operator !(LuaObject a)
-        {
-            if (a == null || a.IsNil || !a.AsBool())
-            {
-                return True;
-            }
-            else
-            {
-                return False;
-            }
-        }
-
-        public static LuaObject operator -(LuaObject a)
-        {
-            return LuaEvents.unm_event(a);
         }
 
         public IEnumerator<LuaTableItem> GetEnumerator()

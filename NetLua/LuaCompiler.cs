@@ -15,33 +15,39 @@ namespace NetLua
 {
     public static class LuaCompiler
     {
-        static Type LuaContext_Type = typeof(LuaContext);
-        static Type LuaArguments_Type = typeof(LuaArguments);
-        static Type LuaEvents_Type = typeof(LuaEvents);
-        static Type LuaObject_Type = typeof(LuaObject);
+        static readonly Type LuaContext_Type = typeof(LuaContext);
+        static readonly Type LuaArguments_Type = typeof(LuaArguments);
+        static readonly Type LuaEvents_Type = typeof(LuaEvents);
+        static readonly Type LuaObject_Type = typeof(LuaObject);
 
-        static MethodInfo LuaContext_Get = LuaContext_Type.GetMethod("Get");
-        static MethodInfo LuaContext_SetLocal = LuaContext_Type.GetMethod("SetLocal");
-        static MethodInfo LuaContext_SetGlobal = LuaContext_Type.GetMethod("SetGlobal");
-        static MethodInfo LuaContext_Set = LuaContext_Type.GetMethod("Set");
+        static readonly MethodInfo LuaContext_Get = LuaContext_Type.GetMethod("Get");
+        static readonly MethodInfo LuaContext_SetLocal = LuaContext_Type.GetMethod("SetLocal");
+        static readonly MethodInfo LuaContext_SetGlobal = LuaContext_Type.GetMethod("SetGlobal");
+        static readonly MethodInfo LuaContext_Set = LuaContext_Type.GetMethod("Set");
 
-        static MethodInfo LuaArguments_Concat = LuaArguments_Type.GetMethod("Concat");
-        static MethodInfo LuaArguments_Add = LuaArguments_Type.GetMethod("Add");
+        static readonly MethodInfo LuaArguments_Concat = LuaArguments_Type.GetMethod("Concat");
+        static readonly MethodInfo LuaArguments_Add = LuaArguments_Type.GetMethod("Add");
 
-        static ConstructorInfo LuaContext_New_parent = LuaContext_Type.GetConstructor(new[] { typeof(LuaContext) });
-        static ConstructorInfo LuaArguments_New = LuaArguments_Type.GetConstructor(new[] { typeof(LuaObject[]) });
-        static ConstructorInfo LuaArguments_New_arglist = LuaArguments_Type.GetConstructor(new[] { typeof(LuaArguments[]) });
-        static ConstructorInfo LuaArguments_New_void = LuaArguments_Type.GetConstructor(new Type[] { });
+        static readonly ConstructorInfo LuaContext_New_parent = LuaContext_Type.GetConstructor(new[] { typeof(LuaContext) });
+        static readonly ConstructorInfo LuaArguments_New = LuaArguments_Type.GetConstructor(new[] { typeof(LuaObject[]) });
+        static readonly ConstructorInfo LuaArguments_New_arglist = LuaArguments_Type.GetConstructor(new[] { typeof(LuaArguments[]) });
+        static readonly ConstructorInfo LuaArguments_New_void = LuaArguments_Type.GetConstructor(new Type[] { });
 
-        static MethodInfo LuaEvents_eq = LuaEvents_Type.GetMethod("eq_event", BindingFlags.NonPublic | BindingFlags.Static);
-        static MethodInfo LuaEvents_concat = LuaEvents_Type.GetMethod("concat_event", BindingFlags.NonPublic | BindingFlags.Static);
-        static MethodInfo LuaEvents_len = LuaEvents_Type.GetMethod("len_event", BindingFlags.NonPublic | BindingFlags.Static);
-        static MethodInfo LuaEvents_toNumber = LuaEvents_Type.GetMethod("toNumber", BindingFlags.NonPublic | BindingFlags.Static);
+        static readonly MethodInfo LuaEvents_pow = LuaEvents_Type.GetMethod(nameof(LuaEvents.pow_event), BindingFlags.Static | BindingFlags.NonPublic);
+        static readonly MethodInfo LuaEvents_band = LuaEvents_Type.GetMethod(nameof(LuaEvents.band_event), BindingFlags.Static | BindingFlags.NonPublic);
+        static readonly MethodInfo LuaEvents_bor = LuaEvents_Type.GetMethod(nameof(LuaEvents.bor_event), BindingFlags.Static | BindingFlags.NonPublic);
+        static readonly MethodInfo LuaEvents_shl = LuaEvents_Type.GetMethod(nameof(LuaEvents.shl_event), BindingFlags.Static | BindingFlags.NonPublic);
+        static readonly MethodInfo LuaEvents_shr = LuaEvents_Type.GetMethod(nameof(LuaEvents.shr_event), BindingFlags.Static | BindingFlags.NonPublic);
 
-        static MethodInfo LuaObject_Call = LuaObject_Type.GetMethod("Call", new[] { LuaArguments_Type });
-        static MethodInfo LuaObject_AsBool = LuaObject_Type.GetMethod("AsBool");
+        static readonly MethodInfo LuaEvents_eq = LuaEvents_Type.GetMethod(nameof(LuaEvents.eq_event), BindingFlags.NonPublic | BindingFlags.Static);
+        static readonly MethodInfo LuaEvents_concat = LuaEvents_Type.GetMethod(nameof(LuaEvents.concat_event), BindingFlags.NonPublic | BindingFlags.Static);
+        static readonly MethodInfo LuaEvents_len = LuaEvents_Type.GetMethod(nameof(LuaEvents.len_event), BindingFlags.NonPublic | BindingFlags.Static);
+        static readonly MethodInfo LuaEvents_toNumber = LuaEvents_Type.GetMethod(nameof(LuaEvents.toNumber), BindingFlags.NonPublic | BindingFlags.Static);
 
-        static LuaArguments VoidArguments = new LuaArguments();
+        static readonly MethodInfo LuaObject_Call = LuaObject_Type.GetMethod(nameof(LuaObject.Call), new[] { LuaArguments_Type });
+        static readonly MethodInfo LuaObject_AsBool = LuaObject_Type.GetMethod(nameof(LuaObject.AsBool));
+
+        static readonly LuaArguments VoidArguments = new LuaArguments();
 
         #region Helpers
         static Expression ToNumber(Expression Expression)
@@ -93,7 +99,7 @@ namespace NetLua
                 case BinaryOp.Addition:
                     return Expression.Add(left, right);
                 case BinaryOp.And:
-                    return Expression.And(left, right);
+                    return Expression.AndAlso(left, right);
                 case BinaryOp.Concat:
                     return Expression.Call(LuaEvents_concat, left, right);
                 case BinaryOp.Different:
@@ -115,11 +121,21 @@ namespace NetLua
                 case BinaryOp.Multiplication:
                     return Expression.Multiply(left, right);
                 case BinaryOp.Or:
-                    return Expression.Or(left, right);
+                    return Expression.OrElse(left, right);
                 case BinaryOp.Power:
-                    return Expression.ExclusiveOr(left, right);
+                    return Expression.Power(left, right, LuaEvents_pow);
                 case BinaryOp.Subtraction:
                     return Expression.Subtract(left, right);
+                case BinaryOp.BitwiseLeftShift:
+                    return Expression.LeftShift(left, right, LuaEvents_shl);
+                case BinaryOp.BitwiseRightShift:
+                    return Expression.RightShift(left, right, LuaEvents_shr);
+                case BinaryOp.BitwiseAnd:
+                    return Expression.And(left, right, LuaEvents_band);
+                case BinaryOp.BitwiseExclusiveOr:
+                    return Expression.ExclusiveOr(left, right);
+                case BinaryOp.BitwiseOr:
+                    return Expression.Or(left, right, LuaEvents_bor);
                 default:
                     throw new NotImplementedException();
             }
@@ -136,6 +152,8 @@ namespace NetLua
                     return Expression.Not(e);
                 case UnaryOp.Length:
                     return Expression.Call(LuaEvents_len, e);
+                case UnaryOp.BitwiseNot:
+                    return Expression.OnesComplement(e);
                 default:
                     throw new NotImplementedException();
             }

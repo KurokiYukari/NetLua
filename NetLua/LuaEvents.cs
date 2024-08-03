@@ -45,9 +45,13 @@ namespace NetLua
         static LuaObject getBinhandler(LuaObject a, LuaObject b, string f)
         {
             var f1 = getMetamethod(a, f);
-            var f2 = getMetamethod(b, f);
+            if (!f1.IsNil)
+            {
+                return f1;
+            }
 
-            return f1 | f2;
+            var f2 = getMetamethod(b, f);
+            return f2;
         }
 
         static LuaObject getEqualhandler(LuaObject a, LuaObject b)
@@ -101,7 +105,7 @@ namespace NetLua
 
         internal static LuaObject getMetamethod(LuaObject obj, string e)
         {
-            if (obj.Metatable == null || obj.Metatable.IsNil)
+            if (obj == null || obj.Metatable == null || obj.Metatable.IsNil)
                 return LuaObject.Nil;
             else
                 return obj.Metatable[e];
@@ -216,6 +220,137 @@ namespace NetLua
                 var handler = getMetamethod(op, "__unm");
                 if (!handler.IsNil)
                     return handler.Call(op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        internal static LuaObject band_event(LuaObject op1, LuaObject op2)
+        {
+            if (TryInvoke_band_event(op1, op2, out var result))
+            {
+                return result;
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        internal static bool TryInvoke_band_event(LuaObject op1, LuaObject op2, out LuaObject result)
+        {
+            if (op1.TryConvertToInt(out int value1) &&
+                op2.TryConvertToInt(out int value2))
+            {
+                result = LuaObject.FromNumber(value1 & value2);
+                return true;
+            }
+            else
+            {
+                var handler = getBinhandler(op1, op2, "__band");
+                if (!handler.IsNil)
+                {
+                    result = handler.Call(op1, op2)[0];
+                    return true;
+                }
+            }
+
+            result = LuaObject.Nil;
+            return false;
+        }
+
+        internal static LuaObject bor_event(LuaObject op1, LuaObject op2)
+        {
+            if (TryInvoke_bor_event(op1, op2, out var result))
+            {
+                return result;
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        internal static bool TryInvoke_bor_event(LuaObject op1, LuaObject op2, out LuaObject result)
+        {
+            if (op1.TryConvertToInt(out int value1) &&
+                op2.TryConvertToInt(out int value2))
+            {
+                result = LuaObject.FromNumber(value1 | value2);
+                return true;
+            }
+            else
+            {
+                var handler = getBinhandler(op1, op2, "__bor");
+                if (!handler.IsNil)
+                {
+                    result = handler.Call(op1, op2)[0];
+                    return true;
+                }
+            }
+
+            result = LuaObject.Nil;
+            return false;
+        }
+
+        internal static LuaObject bxor_event(LuaObject op1, LuaObject op2)
+        {
+            if (op1.TryConvertToInt(out int value1) &&
+                op2.TryConvertToInt(out int value2))
+            {
+                return LuaObject.FromNumber(value1 ^ value2);
+            }
+            else
+            {
+                var handler = getBinhandler(op1, op2, "__bxor");
+                if (!handler.IsNil)
+                    return handler.Call(op1, op2)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        internal static LuaObject bnot_event(LuaObject op)
+        {
+            if (op.TryConvertToInt(out int value))
+            {
+                return LuaObject.FromNumber(~value);
+            }
+            else  
+            {
+                var handler = getMetamethod(op, "__bnot");
+                if (!handler.IsNil)
+                    return handler.Call(op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        internal static LuaObject shl_event(LuaObject op1, LuaObject op2)
+        {
+            if (op1.TryConvertToInt(out int value1) &&
+                op2.TryConvertToInt(out int value2))
+            {
+                return LuaObject.FromNumber(value1 << value2);
+            }
+            else
+            {
+                var handler = getBinhandler(op1, op2, "__shl");
+                if (!handler.IsNil)
+                    return handler.Call(op1, op2)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        internal static LuaObject shr_event(LuaObject op1, LuaObject op2)
+        {
+            if (op1.TryConvertToInt(out int value1) &&
+                op2.TryConvertToInt(out int value2))
+            {
+                return LuaObject.FromNumber(value1 >> value2);
+            }
+            else
+            {
+                var handler = getBinhandler(op1, op2, "__shr");
+                if (!handler.IsNil)
+                    return handler.Call(op1, op2)[0];
             }
 
             throw new LuaException("Invalid arithmetic operation");

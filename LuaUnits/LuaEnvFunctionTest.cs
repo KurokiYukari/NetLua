@@ -2,12 +2,14 @@
  * See LICENSE file
  */
 
+using System.Diagnostics.CodeAnalysis;
+using System.Linq.Expressions;
 using NetLua;
 
 namespace LuaUnits
 {
     [TestFixture]
-    public class LuaEnvTest
+    public class LuaEnvFunctionTest
     {
         [TestCase("""
 function(...)
@@ -32,16 +34,11 @@ end
             Assert.That(args.Select(o => o.ToString()).SequenceEqual(parameters));
         }
 
-        private static LuaArguments RunLua(string code)
-        {
-            var lua = new Lua();
-            return lua.DoString(code);
-        }
-
         private static LuaArguments RunFunction(string code, params string[] parameters)
         {
             var fullCode = $"return ({code})({string.Join(", ", parameters)})";
-            return RunLua(fullCode);
+            var lua = new Lua();
+            return lua.DoString(fullCode);
         }
     }
 }
