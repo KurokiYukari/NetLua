@@ -401,6 +401,7 @@ namespace NetLua
                     assign.Names.Add(child.ChildNodes[1].Token.ValueString);
                     var func = new Ast.FunctionDefinition();
 
+                    argsNode = argsNode.ChildNodes[0];
                     if (argsNode.ChildNodes.Count > 0)
                     {
                         argsNode = argsNode.ChildNodes[0];

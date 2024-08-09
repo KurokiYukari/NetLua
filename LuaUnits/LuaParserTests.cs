@@ -67,6 +67,19 @@ namespace LuaUnits
             ParseExpression<FunctionDefinition>(code);
         }
 
+        [TestCase("local function f() end", "f")]
+        [TestCase("local function f(a) end", "f", "a")]
+        [TestCase("local function f(a, b) end", "f", "a", "b")]
+        public void ParseLocalFunctionDefinition(string code, string name, params string[] args)
+        {
+            var block = _parser.ParseString(code);
+            var assignment = (LocalAssignment)block.Statements[0];
+            Assert.That(assignment.Names[0], Is.EqualTo(name));
+            var funcDef = (FunctionDefinition)assignment.Values[0];
+            Assert.That(funcDef.Arguments, Has.Count.EqualTo(args.Length));
+            CollectionAssert.AreEqual(args, funcDef.Arguments.Select(a => a.Name));
+        }
+
         private IExpression ParseExpression(string code)
         {
             var block = _parser.ParseString($"return\r\n{code}");
