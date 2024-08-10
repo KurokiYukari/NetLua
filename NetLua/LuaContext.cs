@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 
 using System.Dynamic;
+using NetLua.Ast;
+using System.Linq.Expressions;
 
 namespace NetLua
 {
@@ -16,8 +18,10 @@ namespace NetLua
     /// </summary>
     public class LuaContext : DynamicObject
     {
-        LuaContext parent;
-        Dictionary<string, LuaObject> variables;
+        const string _ENV = "_ENV";
+
+        readonly LuaContext parent;
+        readonly IDictionary<string, LuaObject> variables;
         LuaArguments varargs;
 
         /// <summary>
@@ -28,6 +32,17 @@ namespace NetLua
             parent = Parent;
             variables = new Dictionary<string, LuaObject>();
             varargs = new LuaArguments(new LuaObject[] { });
+
+            if (parent == null)
+            {
+                var env = LuaObject.NewTable();
+                env["_G"] = env;
+                variables[_ENV] = env;
+            }
+            else
+            {
+                variables[_ENV] = parent.variables[_ENV];
+            }
         }
 
         /// <summary>
@@ -40,7 +55,7 @@ namespace NetLua
         /// </summary>
         public void SetLocal(string Name, LuaObject Value)
         {
-            variables[Name] = Value;
+            variables[Name] = Value ?? LuaObject.Nil;
         }
 
         /// <summary>
@@ -48,41 +63,60 @@ namespace NetLua
         /// </summary>
         public void SetGlobal(string Name, LuaObject Value)
         {
-            if (parent == null)
-                variables[Name] = Value;
-            else
-                parent.SetGlobal(Name, Value);
+            variables[_ENV][Name] = Value ?? LuaObject.Nil;
         }
 
         /// <summary>
         /// Returns the nearest declared variable value or nil
         /// </summary>
-        public LuaObject Get(string Name)
+        public LuaObject Get(string name)
         {
-            var obj = LuaObject.Nil;
-            if (variables.TryGetValue(Name, out obj) || parent == null)
+            if (TryGetLocal(name, out var value))
             {
-                if (obj == null)
-                    return LuaObject.Nil;
-                else
-                    return obj;
+                return value;
             }
-            else
+
+            if (variables.TryGetValue(_ENV, out var env))
             {
-                return parent.Get(Name);
+                return env[name];
             }
+            return LuaObject.Nil;
+        }
+
+        public bool TryGetLocal(string name, out LuaObject value)
+        {
+            var current = this;
+            while (current != null)
+            {
+                if (current.variables.TryGetValue(name, out var obj))
+                {
+                    value = obj ?? LuaObject.Nil;
+                    return true;
+                }
+                current = current.parent;
+            }
+
+            value = LuaObject.Nil;
+            return false;
         }
 
         /// <summary>
         /// Sets the nearest declared variable or creates a new one
         /// </summary>
-        public void Set(string Name, LuaObject Value)
+        public void Set(string name, LuaObject value)
         {
-            var obj = LuaObject.Nil;
-            if (parent == null || variables.TryGetValue(Name, out obj))
-                variables[Name] = Value;
-            else
-                parent.Set(Name, Value);
+            var current = this;
+            while (current != null)
+            {
+                if (current.variables.ContainsKey(name))
+                {
+                    current.SetLocal(name, value);
+                    return;
+                }
+                current = current.parent;
+            }
+
+            SetGlobal(name, value);
         }
 
         internal LuaArguments Varargs
