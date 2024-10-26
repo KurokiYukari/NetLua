@@ -17,7 +17,6 @@ namespace NetLua
     {
         static readonly Type LuaContext_Type = typeof(LuaContext);
         static readonly Type LuaArguments_Type = typeof(LuaArguments);
-        static readonly Type LuaEvents_Type = typeof(LuaEvents);
         static readonly Type LuaObject_Type = typeof(LuaObject);
 
         static readonly MethodInfo LuaContext_Get = LuaContext_Type.GetMethod("Get");
@@ -29,30 +28,80 @@ namespace NetLua
         static readonly MethodInfo LuaArguments_Add = LuaArguments_Type.GetMethod("Add");
 
         static readonly ConstructorInfo LuaContext_New_parent = LuaContext_Type.GetConstructor(new[] { typeof(LuaContext) });
+        static readonly ConstructorInfo LuaContext_New_parent_env = LuaContext_Type.GetConstructor(new[] { typeof(LuaContext), typeof(LuaObject) });
         static readonly ConstructorInfo LuaArguments_New = LuaArguments_Type.GetConstructor(new[] { typeof(LuaObject[]) });
-        static readonly ConstructorInfo LuaArguments_New_arglist = LuaArguments_Type.GetConstructor(new[] { typeof(LuaArguments[]) });
+        static readonly ConstructorInfo LuaArguments_New_argList = LuaArguments_Type.GetConstructor(new[] { typeof(LuaArguments[]) });
         static readonly ConstructorInfo LuaArguments_New_void = LuaArguments_Type.GetConstructor(new Type[] { });
 
-        static readonly MethodInfo LuaEvents_pow = LuaEvents_Type.GetMethod(nameof(LuaEvents.pow_event), BindingFlags.Static | BindingFlags.NonPublic);
-        static readonly MethodInfo LuaEvents_band = LuaEvents_Type.GetMethod(nameof(LuaEvents.band_event), BindingFlags.Static | BindingFlags.NonPublic);
-        static readonly MethodInfo LuaEvents_bor = LuaEvents_Type.GetMethod(nameof(LuaEvents.bor_event), BindingFlags.Static | BindingFlags.NonPublic);
-        static readonly MethodInfo LuaEvents_shl = LuaEvents_Type.GetMethod(nameof(LuaEvents.shl_event), BindingFlags.Static | BindingFlags.NonPublic);
-        static readonly MethodInfo LuaEvents_shr = LuaEvents_Type.GetMethod(nameof(LuaEvents.shr_event), BindingFlags.Static | BindingFlags.NonPublic);
+        static class Helpers
+        {
+            public static LuaObject Pow(LuaObject left, LuaObject right)
+            {
+                return left.Pow(right);
+            }
+            public static LuaObject BitwiseAnd(LuaObject left, LuaObject right)
+            {
+                return left.BitwiseAnd(right);
+            }
+            public static LuaObject BitwiseOr(LuaObject left, LuaObject right)
+            {
+                return left.BitwiseOr(right);
+            }
+            public static LuaObject ShiftLeft(LuaObject left, LuaObject right)
+            {
+                return left.ShiftLeft(right);
+            }
+            public static LuaObject ShiftRight(LuaObject left, LuaObject right)
+            {
+                return left.ShiftRight(right);
+            }
+            public static LuaObject Equal(LuaObject left, LuaObject right)
+            {
+                return left.LuaEquals(right);
+            }
+            public static LuaObject NotEqual(LuaObject left, LuaObject right)
+            {
+                return !left.LuaEquals(right);
+            }
+            public static LuaObject Concat(LuaObject left, LuaObject right)
+            {
+                return left.Concat(right);
+            }
 
-        static readonly MethodInfo LuaEvents_eq = LuaEvents_Type.GetMethod(nameof(LuaEvents.eq_event), BindingFlags.NonPublic | BindingFlags.Static);
-        static readonly MethodInfo LuaEvents_concat = LuaEvents_Type.GetMethod(nameof(LuaEvents.concat_event), BindingFlags.NonPublic | BindingFlags.Static);
-        static readonly MethodInfo LuaEvents_len = LuaEvents_Type.GetMethod(nameof(LuaEvents.len_event), BindingFlags.NonPublic | BindingFlags.Static);
-        static readonly MethodInfo LuaEvents_toNumber = LuaEvents_Type.GetMethod(nameof(LuaEvents.toNumber), BindingFlags.NonPublic | BindingFlags.Static);
+            public static LuaObject ToNumber(LuaObject target)
+            {
+                if (target.IsNumber)
+                {
+                    return target;
+                }
+                if (target.IsString && double.TryParse(target.AsString(), out var result))
+                {
+                    return result;
+                }
+                return LuaObject.Nil;
+            }
+        }
 
-        static readonly MethodInfo LuaObject_Call = LuaObject_Type.GetMethod(nameof(LuaObject.Call), new[] { LuaArguments_Type });
-        static readonly MethodInfo LuaObject_AsBool = LuaObject_Type.GetMethod(nameof(LuaObject.AsBool));
+        static readonly MethodInfo Operators_pow = ((Func<LuaObject, LuaObject, LuaObject>)Helpers.Pow).Method;
+        static readonly MethodInfo Operators_band = ((Func<LuaObject, LuaObject, LuaObject>)Helpers.BitwiseAnd).Method;
+        static readonly MethodInfo Operators_bor = ((Func<LuaObject, LuaObject, LuaObject>)Helpers.BitwiseOr).Method;
+        static readonly MethodInfo Operators_shl = ((Func<LuaObject, LuaObject, LuaObject>)Helpers.ShiftLeft).Method;
+        static readonly MethodInfo Operators_shr = ((Func<LuaObject, LuaObject, LuaObject>)Helpers.ShiftRight).Method;
+        static readonly MethodInfo Operators_eq = ((Func<LuaObject, LuaObject, LuaObject>)Helpers.Equal).Method;
+        static readonly MethodInfo Operators_neq = ((Func<LuaObject, LuaObject, LuaObject>)Helpers.NotEqual).Method;
+        static readonly MethodInfo Operators_concat = ((Func<LuaObject, LuaObject, LuaObject>)Helpers.Concat).Method;
+        static readonly MethodInfo Helpers_toNumber = ((Func<LuaObject, LuaObject>)Helpers.ToNumber).Method;
+
+        static readonly MethodInfo LuaObject_Len = ((Func<LuaObject>)LuaObject.Nil.Len).Method;
+        static readonly MethodInfo LuaObject_Call = ((Func<LuaArguments, LuaArguments>)LuaObject.Nil.Call).Method;
+        static readonly MethodInfo LuaObject_AsBool = ((Func<bool>)LuaObject.Nil.AsBool).Method;
 
         static readonly LuaArguments VoidArguments = new LuaArguments();
 
         #region Helpers
         static Expression ToNumber(Expression Expression)
         {
-            return Expression.Call(LuaEvents_toNumber, Expression);
+            return Expression.Call(Helpers_toNumber, Expression);
         }
 
         static Expression CreateLuaArguments(params Expression[] Expressions)
@@ -101,13 +150,13 @@ namespace NetLua
                 case BinaryOp.And:
                     return Expression.AndAlso(left, right);
                 case BinaryOp.Concat:
-                    return Expression.Call(LuaEvents_concat, left, right);
+                    return Expression.Call(left, Operators_concat, right);
                 case BinaryOp.Different:
-                    return Expression.Not(Expression.Call(LuaEvents_eq, left, right));
+                    return Expression.NotEqual(left, right, true, Operators_neq);
                 case BinaryOp.Division:
                     return Expression.Divide(left, right);
                 case BinaryOp.Equal:
-                    return Expression.Call(LuaEvents_eq, left, right);
+                    return Expression.Equal(left, right, true, Operators_eq);
                 case BinaryOp.GreaterOrEqual:
                     return Expression.GreaterThanOrEqual(left, right);
                 case BinaryOp.GreaterThan:
@@ -123,19 +172,19 @@ namespace NetLua
                 case BinaryOp.Or:
                     return Expression.OrElse(left, right);
                 case BinaryOp.Power:
-                    return Expression.Power(left, right, LuaEvents_pow);
+                    return Expression.Power(left, right, Operators_pow);
                 case BinaryOp.Subtraction:
                     return Expression.Subtract(left, right);
                 case BinaryOp.BitwiseLeftShift:
-                    return Expression.LeftShift(left, right, LuaEvents_shl);
+                    return Expression.LeftShift(left, right, Operators_shl);
                 case BinaryOp.BitwiseRightShift:
-                    return Expression.RightShift(left, right, LuaEvents_shr);
+                    return Expression.RightShift(left, right, Operators_shr);
                 case BinaryOp.BitwiseAnd:
-                    return Expression.And(left, right, LuaEvents_band);
+                    return Expression.And(left, right, Operators_band);
                 case BinaryOp.BitwiseExclusiveOr:
                     return Expression.ExclusiveOr(left, right);
                 case BinaryOp.BitwiseOr:
-                    return Expression.Or(left, right, LuaEvents_bor);
+                    return Expression.Or(left, right, Operators_bor);
                 default:
                     throw new NotImplementedException();
             }
@@ -151,7 +200,7 @@ namespace NetLua
                 case UnaryOp.Negate:
                     return Expression.Not(e);
                 case UnaryOp.Length:
-                    return Expression.Call(LuaEvents_len, e);
+                    return Expression.Call(e, LuaObject_Len);
                 case UnaryOp.BitwiseNot:
                     return Expression.OnesComplement(e);
                 default:
@@ -328,7 +377,17 @@ namespace NetLua
                 return Expression.Call(function, LuaObject_Call, Expression.Call(luaarg, LuaArguments_Concat, lastArg));
         }
 
-        public static Expression<Func<LuaObject>> CompileFunction(Ast.FunctionDefinition func, Expression Context)
+        public static Expression<Func<LuaObject>> CompileFunction(Ast.FunctionDefinition func, Expression parent)
+        {
+            return CompileFunctionWithContext(func, Expression.New(LuaContext_New_parent, parent));
+        }
+
+        public static Expression<Func<LuaObject>> CompileFunction(Ast.FunctionDefinition func, Expression parent, Expression env)
+        {
+            return CompileFunctionWithContext(func, Expression.New(LuaContext_New_parent_env, parent, env));
+        }
+
+        private static Expression<Func<LuaObject>> CompileFunctionWithContext(Ast.FunctionDefinition func, Expression newContextExpr)
         {
             var exprs = new List<Expression>();
 
@@ -337,7 +396,7 @@ namespace NetLua
             var @break = Expression.Label("break");
 
             var scopeVar = Expression.Parameter(LuaContext_Type, "funcScope");
-            var assignScope = Expression.Assign(scopeVar, Expression.New(LuaContext_New_parent, Context));
+            var assignScope = Expression.Assign(scopeVar, newContextExpr);
 
             #region Arguments init
             var len = Expression.Property(args, "Length");

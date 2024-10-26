@@ -10,6 +10,7 @@ using System.Text;
 using System.Dynamic;
 using NetLua.Ast;
 using System.Linq.Expressions;
+using System.IO;
 
 namespace NetLua
 {
@@ -20,30 +21,52 @@ namespace NetLua
     {
         const string _ENV = "_ENV";
 
-        readonly LuaContext parent;
-        readonly IDictionary<string, LuaObject> variables;
-        LuaArguments varargs;
+        readonly Func<Parser> _parserGetter;
+        readonly LuaContext _parent;
+        readonly IDictionary<string, LuaObject> _variables;
+        LuaArguments _varArgs;
+        internal LuaArguments Varargs
+        {
+            get => _varArgs;
+            set => _varArgs = value;
+        }
+
+        public LuaContext(LuaContext parent, LuaObject env, Func<Parser> parserGetter)
+        {
+            _parserGetter = parserGetter ?? parent?._parserGetter;
+            _parent = parent;
+            _variables = new Dictionary<string, LuaObject>();
+            _varArgs = new LuaArguments();
+
+            if (_parent == null)
+            {
+                if (env == null)
+                {
+                    env = LuaObject.NewTable();
+                }
+                env["_G"] = env;
+                env["_VERSION"] = BasicLibrary._VERSION;
+                _variables[_ENV] = env;
+            }
+            else
+            {
+                if (env == null)
+                {
+                    env = _parent._variables[_ENV];
+                }
+                _variables[_ENV] = env;
+            }
+        }
+
+        public LuaContext(LuaContext parent, LuaObject env) : this(parent, env, null)
+        {
+        }
 
         /// <summary>
         /// Used to create scopes
         /// </summary>
-        public LuaContext(LuaContext Parent)
-        {
-            parent = Parent;
-            variables = new Dictionary<string, LuaObject>();
-            varargs = new LuaArguments(new LuaObject[] { });
-
-            if (parent == null)
-            {
-                var env = LuaObject.NewTable();
-                env["_G"] = env;
-                variables[_ENV] = env;
-            }
-            else
-            {
-                variables[_ENV] = parent.variables[_ENV];
-            }
-        }
+        /// <param name="parent"></param>
+        public LuaContext(LuaContext parent) : this(parent, null, null) {}
 
         /// <summary>
         /// Creates a base context
@@ -55,7 +78,7 @@ namespace NetLua
         /// </summary>
         public void SetLocal(string Name, LuaObject Value)
         {
-            variables[Name] = Value ?? LuaObject.Nil;
+            _variables[Name] = Value ?? LuaObject.Nil;
         }
 
         /// <summary>
@@ -63,7 +86,7 @@ namespace NetLua
         /// </summary>
         public void SetGlobal(string Name, LuaObject Value)
         {
-            variables[_ENV][Name] = Value ?? LuaObject.Nil;
+            _variables[_ENV][Name] = Value ?? LuaObject.Nil;
         }
 
         /// <summary>
@@ -76,7 +99,7 @@ namespace NetLua
                 return value;
             }
 
-            if (variables.TryGetValue(_ENV, out var env))
+            if (_variables.TryGetValue(_ENV, out var env))
             {
                 return env[name];
             }
@@ -88,12 +111,12 @@ namespace NetLua
             var current = this;
             while (current != null)
             {
-                if (current.variables.TryGetValue(name, out var obj))
+                if (current._variables.TryGetValue(name, out var obj))
                 {
                     value = obj ?? LuaObject.Nil;
                     return true;
                 }
-                current = current.parent;
+                current = current._parent;
             }
 
             value = LuaObject.Nil;
@@ -108,28 +131,57 @@ namespace NetLua
             var current = this;
             while (current != null)
             {
-                if (current.variables.ContainsKey(name))
+                if (current._variables.ContainsKey(name))
                 {
                     current.SetLocal(name, value);
                     return;
                 }
-                current = current.parent;
+                current = current._parent;
             }
 
             SetGlobal(name, value);
         }
 
-        internal LuaArguments Varargs
+        /// <summary>
+        /// Parses and executes the specified file
+        /// </summary>
+        /// <param name="filename">The file to execute</param>
+        public LuaArguments DoFile(string filename)
         {
-            get
-            {
-                return varargs;
-            }
+            var source = File.ReadAllText(filename);
+            return DoString(source, filename);
+        }
 
-            set
-            {
-                varargs = value;
-            }
+        /// <summary>
+        /// Parses and executes the specified string
+        /// </summary>
+        public LuaArguments DoString(string chunk, string chunkName = null)
+        {
+            var function = Load(chunk, chunkName);
+            return function(Lua.Return());
+        }
+
+        /// <summary>
+        /// Parses and executes the specified parsed block
+        /// </summary>
+        public LuaArguments DoAst(Block block)
+        {
+            FunctionDefinition def = new FunctionDefinition();
+            def.Arguments = new List<Argument>();
+            def.Body = block;
+            var function = LuaCompiler.CompileFunction(def, Expression.Constant(this)).Compile();
+            return function().Call(Lua.Return());
+        }
+
+        public LuaFunction Load(string chunk, string chunkName = null, LuaObject env = null)
+        {
+            var parser = _parserGetter?.Invoke() ?? new Parser();
+            env ??= LuaObject.Nil;
+            FunctionDefinition def = new FunctionDefinition();
+            def.Arguments = new List<Argument>();
+            def.Body = parser.ParseString(chunk, chunkName);
+            var function = LuaCompiler.CompileFunction(def, Expression.Constant(this), Expression.Constant(env)).Compile();
+            return function().AsFunction();
         }
 
         #region DynamicObject

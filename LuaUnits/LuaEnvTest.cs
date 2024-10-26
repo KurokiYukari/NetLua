@@ -12,18 +12,18 @@ namespace LuaUnits
         [Test]
         public void TestEnvAndG()
         {
-            var env = new Lua();
+            var env = Lua.CreateDefaultEnv();
             
             env.DoString("a = 1");
 
-            var _G = env.Context.Get("_G");
+            var _G = env.Get("_G");
             var _G_G = _G["_G"];
             Assert.That(_G_G, Is.EqualTo(_G));
 
-            var _ENV = env.Context.Get("_ENV");
+            var _ENV = env.Get("_ENV");
             Assert.That(_ENV, Is.EqualTo(_G));
 
-            var a = env.Context.Get("a");
+            var a = env.Get("a");
             Assert.That(a.AsNumber(), Is.EqualTo(1));
 
             var e_a = _ENV["a"];
@@ -40,7 +40,7 @@ namespace LuaUnits
             a = env.DoString("foo()")[0];
             Assert.That(a, Is.EqualTo(LuaObject.Nil));
 
-            a = env.Context.Get("a");
+            a = env.Get("a");
             Assert.That(a.AsNumber(), Is.EqualTo(1));
         }
     }

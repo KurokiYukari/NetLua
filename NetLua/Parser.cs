@@ -15,8 +15,6 @@ namespace NetLua
 {
     public class Parser
     {
-        public Ast.Block block;
-
         LuaGrammar grammar = new LuaGrammar();
         LanguageData language;
         Irony.Parsing.Parser parser;
@@ -27,29 +25,22 @@ namespace NetLua
             parser = new Irony.Parsing.Parser(language);
         }
 
-        public Ast.Block ParseString(string Chunk)
+        public Ast.Block ParseString(string chunk, string chunkName = null)
         {
-            ParseTree parseTree = parser.Parse(Chunk);
+            ParseTree parseTree = parser.Parse(chunk);
             ParseTreeNode root = parseTree.Root;
             if (root == null)
             {
                 Irony.LogMessage msg = parseTree.ParserMessages[0];
-                throw new LuaException("", msg.Location.Line, msg.Location.Column, msg.Message);
+                throw new LuaException(chunkName ?? string.Empty, msg.Location.Line, msg.Location.Column, msg.Message);
             }
             return (ParseBlock(root));
         }
 
-        public Ast.Block ParseFile(string Filename)
+        public Ast.Block ParseFile(string filename)
         {
-            string source = System.IO.File.ReadAllText(Filename);
-            ParseTree parseTree = parser.Parse(source, Filename);
-            ParseTreeNode root = parseTree.Root;
-            if (root == null)
-            {
-                Irony.LogMessage msg = parseTree.ParserMessages[0];
-                throw new LuaException(Filename, msg.Location.Line, msg.Location.Column, msg.Message);
-            }
-            return (ParseBlock(root));
+            string source = System.IO.File.ReadAllText(filename);
+            return ParseString(source, filename);
         }
 
         #region Binary expression tree

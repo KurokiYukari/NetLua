@@ -37,7 +37,7 @@ end
         private static LuaArguments RunFunction(string code, params string[] parameters)
         {
             var fullCode = $"return ({code})({string.Join(", ", parameters)})";
-            var lua = new Lua();
+            var lua = Lua.CreateDefaultEnv();
             return lua.DoString(fullCode);
         }
     }

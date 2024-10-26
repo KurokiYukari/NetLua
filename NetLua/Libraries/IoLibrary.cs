@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Runtime.Serialization;
 
 namespace NetLua
 {
@@ -31,13 +32,13 @@ namespace NetLua
 
         static bool isStream(LuaObject obj)
         {
-            return (obj.IsUserData && obj.luaobj is FileObject);
+            return (obj.IsUserData && obj._luaObj is FileObject);
         }
 
         static LuaObject CreateFileObject(Stream stream)
         {
             LuaObject obj = LuaObject.FromObject(new FileObject(stream));
-            obj.Metatable = FileMetatable;
+            obj.SetMetaTable(FileMetatable, true);
 
             return obj;
         }
@@ -47,7 +48,7 @@ namespace NetLua
             FileObject fobj = new FileObject(stream);
             fobj.writer.AutoFlush = autoflush;
             LuaObject obj = LuaObject.FromObject(fobj);
-            obj.Metatable = FileMetatable;
+            obj.SetMetaTable(FileMetatable, true);
 
             return obj;
         }
@@ -122,7 +123,7 @@ namespace NetLua
             var obj = args[0];
             if (isStream(obj))
             {
-                FileObject fobj = obj.luaobj as FileObject;
+                FileObject fobj = obj._luaObj as FileObject;
                 if (!fobj.stream.CanWrite && !fobj.stream.CanRead)
                     return Lua.Return("closed file");
                 else
@@ -215,7 +216,7 @@ namespace NetLua
             var self = args[0];
             if (isStream(self))
             {
-                FileObject fobj = self.luaobj as FileObject;
+                FileObject fobj = self._luaObj as FileObject;
                 foreach (var arg in args)
                 {
                     if (arg == self)
@@ -240,7 +241,7 @@ namespace NetLua
             var obj = args[0];
             if (isStream(obj))
             {
-                FileObject fobj = obj.luaobj as FileObject;
+                FileObject fobj = obj._luaObj as FileObject;
                 fobj.stream.Close();
             }
             return Lua.Return();
@@ -251,7 +252,7 @@ namespace NetLua
             var obj = args[0];
             if (isStream(obj))
             {
-                FileObject fobj = obj.luaobj as FileObject;
+                FileObject fobj = obj._luaObj as FileObject;
                 fobj.writer.Flush();
             }
             return Lua.Return();
@@ -265,7 +266,7 @@ namespace NetLua
 
             if (isStream(obj))
             {
-                var fobj = obj.luaobj as FileObject;
+                var fobj = obj._luaObj as FileObject;
                 switch (whence.ToString())
                 {
                     case "cur":
@@ -285,7 +286,7 @@ namespace NetLua
             var self = args[0];
             if (isStream(self))
             {
-                var fobj = self.luaobj as FileObject;
+                var fobj = self._luaObj as FileObject;
                 if (args.Length == 1)
                 {
                     var line = fobj.reader.ReadLine();

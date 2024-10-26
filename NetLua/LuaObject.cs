@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 
 using System.Dynamic;
+using System.Runtime.CompilerServices;
 
 namespace NetLua
 {
@@ -24,7 +25,7 @@ namespace NetLua
         /// <summary>
         /// An exception thrown by a syntactical error
         /// </summary>
-        /// <param name="file">The file wich contains the error</param>
+        /// <param name="file">The file witch contains the error</param>
         /// <param name="row">The row of the error</param>
         /// <param name="col">The column of the error</param>
         /// <param name="message">The kind of the error</param>
@@ -161,69 +162,57 @@ namespace NetLua
     /// </summary>
     public class LuaObject : DynamicObject, 
         IEnumerable<LuaTableItem>,
-        IEquatable<LuaObject>
+        IEquatable<LuaObject>,
+        IComparable
     {
-        internal object luaobj;
+        internal object _luaObj;
         internal LuaType type;
-        private LuaObject metatable = Nil;
+        private LuaObject _metaTable = Nil;
 
         public LuaObject()
         {
-            this.metatable = Nil;
+            this._metaTable = Nil;
         }
 
         private LuaObject(object Obj, LuaType Type)
         {
-            this.metatable = Nil;
-            this.luaobj = Obj;
+            this._metaTable = Nil;
+            this._luaObj = Obj;
             this.type = Type;
         }
 
         ~LuaObject()
         {
-            LuaEvents.gc_event(this);
-        }
-
-        /// <summary>
-        /// Gets or sets the object's metatable
-        /// </summary>
-        public LuaObject Metatable
-        {
-            get
-            {
-                return metatable;
-            }
-            set
-            {
-                metatable = value;
-            }
+            var handler = GetMetaMethod(LuaEvents.GC);
+            if (handler.IsFunction)
+                handler.AsFunction()(new LuaObject[] { this });
         }
 
         #region Common objects
         /// <summary>
         /// An empty/unset value
         /// </summary>
-        public static readonly LuaObject Nil = new LuaObject() { luaobj = null, type = LuaType.nil };
+        public static readonly LuaObject Nil = new LuaObject() { _luaObj = null, type = LuaType.nil };
 
         /// <summary>
         /// A standard true boolean value
         /// </summary>
-        public static readonly LuaObject True = new LuaObject { luaobj = true, type = LuaType.boolean, Metatable = Nil };
+        public static readonly LuaObject True = new LuaObject { _luaObj = true, type = LuaType.boolean };
 
         /// <summary>
         /// A standard false boolean value
         /// </summary>
-        public static readonly LuaObject False = new LuaObject { luaobj = false, type = LuaType.boolean, Metatable = Nil };
+        public static readonly LuaObject False = new LuaObject { _luaObj = false, type = LuaType.boolean };
 
         /// <summary>
         /// Zero (number)
         /// </summary>
-        public static readonly LuaObject Zero = new LuaObject { luaobj = 0d, type = LuaType.number, Metatable = Nil };
+        public static readonly LuaObject Zero = new LuaObject { _luaObj = 0d, type = LuaType.number };
 
         /// <summary>
         /// And empty string
         /// </summary>
-        public static readonly LuaObject EmptyString = new LuaObject { luaobj = "", type = LuaType.@string, Metatable = Nil };
+        public static readonly LuaObject EmptyString = new LuaObject { _luaObj = "", type = LuaType.@string };
         #endregion
 
         /// <summary>
@@ -246,44 +235,23 @@ namespace NetLua
         /// </summary>
         public static LuaObject FromObject(object obj)
         {
-            if (obj == null)
-                return Nil;
-
-            if (obj is LuaObject)
-                return (LuaObject)obj;
-
-            if (obj is bool)
-                return FromBool((bool)obj);
-
-            {
-                var str = obj as string;
-                if (str != null)
-                    return FromString(str);
-            }
-
-            {
-                var @delegate = obj as LuaFunction;
-                if (@delegate != null)
-                    return FromFunction(@delegate);
-            }
-
-            {
-                var dictionary = obj as LuaTable;
-                if (dictionary != null)
-                    return FromTable(dictionary);
-            }
-
-            if (obj is double) return FromNumber((double)obj);
-            if (obj is float) return FromNumber((float)obj);
-            if (obj is int) return FromNumber((int)obj);
-            if (obj is uint) return FromNumber((uint)obj);
-            if (obj is short) return FromNumber((short)obj);
-            if (obj is ushort) return FromNumber((ushort)obj);
-            if (obj is long) return FromNumber((long)obj);
-            if (obj is ulong) return FromNumber((ulong)obj);
-            if (obj is byte) return FromNumber((byte)obj);
-            if (obj is sbyte) return FromNumber((sbyte)obj);
-            if (obj is Thread) return new LuaObject { luaobj = obj, type = LuaType.thread };
+            if (obj == null) return Nil;
+            {if (obj is LuaObject v) return v;}
+            {if (obj is bool v) return FromBool(v);}
+            {if (obj is string v) return FromString(v);}
+            {if (obj is LuaFunction v) return FromFunction(v);}
+            {if (obj is LuaTable v) return FromTable(v);}
+            {if (obj is double v) return FromNumber(v);}
+            {if (obj is float v) return FromNumber(v);}
+            {if (obj is int v) return FromNumber(v);}
+            {if (obj is uint v) return FromNumber(v);}
+            {if (obj is short v) return FromNumber(v);}
+            {if (obj is ushort v) return FromNumber(v);}
+            {if (obj is long v) return FromNumber(v);}
+            {if (obj is ulong v) return FromNumber(v);}
+            {if (obj is byte v) return FromNumber(v);}
+            {if (obj is sbyte v) return FromNumber(v);}
+            {if (obj is Thread) return new LuaObject { _luaObj = obj, type = LuaType.thread };}
             return FromUserData(obj);
         }
 
@@ -330,10 +298,10 @@ namespace NetLua
         /// <returns></returns>
         public bool AsBool()
         {
-            if (luaobj == null)
+            if (_luaObj == null)
                 return false;
 
-            if (luaobj is bool && ((bool)luaobj) == false)
+            if (_luaObj is bool && ((bool)_luaObj) == false)
                 return false;
 
             return true;
@@ -372,7 +340,28 @@ namespace NetLua
         /// </summary>
         public double AsNumber()
         {
-            return (double)luaobj;
+            return (double)_luaObj;
+        }
+
+        public bool TryConvertToNumber(out double value)
+        {
+            if (IsNumber)
+            {
+                value = AsNumber();
+                return true;
+            }
+            else if (IsString)
+            {
+                if (double.TryParse(AsString(), out value))
+                    return true;
+                else
+                    return false;
+            }
+            else
+            {
+                value = 0d;
+                return false;
+            }
         }
 
         public bool TryConvertToInt(out int value)
@@ -381,7 +370,7 @@ namespace NetLua
             {
                 var dValue = AsNumber();
                 value = (int)dValue;
-                if (dValue - value < 0.00001d)
+                if (dValue - value < double.Epsilon)
                 {
                     return true;
                 }
@@ -389,6 +378,15 @@ namespace NetLua
 
             value = 0;
             return false;
+        }
+
+        public int? AsInt()
+        {
+            if (TryConvertToInt(out var value))
+            {
+                return value;
+            }
+            return null;
         }
         #endregion
 
@@ -421,7 +419,7 @@ namespace NetLua
 
         public string AsString()
         {
-            return luaobj.ToString();
+            return _luaObj.ToString();
         }
         #endregion
 
@@ -446,7 +444,7 @@ namespace NetLua
 
         public LuaFunction AsFunction()
         {
-            var fn = luaobj as LuaFunction;
+            var fn = _luaObj as LuaFunction;
             if (fn == null)
                 throw new LuaException("cannot call non-function");
 
@@ -484,21 +482,21 @@ namespace NetLua
 
         public LuaTable AsTable()
         {
-            return luaobj as LuaTable;
+            return _luaObj as LuaTable;
         }
         #endregion
 
-        #region Userdata
+        #region UserData
         /// <summary>
         /// Creates a Lua object from a .NET object
         /// </summary>
-        public static LuaObject FromUserData(object userdata)
+        public static LuaObject FromUserData(object userData)
         {
-            if (userdata == null)
+            if (userData == null)
                 return Nil;
 
-            //return new LuaObject { luaobj = userdata, type = LuaType.userdata };
-            return new LuaObject(userdata, LuaType.userdata);
+            //return new LuaObject { _luaObj = userData, type = LuaType.userdata };
+            return new LuaObject(userData, LuaType.userdata);
         }
 
         /// <summary>
@@ -516,13 +514,55 @@ namespace NetLua
         /// </summary>
         public object AsUserData()
         {
-            return luaobj;
+            return _luaObj;
         } 
         #endregion
 
-        public static LuaObject operator !(LuaObject a)
+        public static LuaObject GetBinHandler(LuaObject a, LuaObject b, string f)
         {
-            if (!a.AsBool())
+            var f1 = a.GetMetaMethod(f);
+            if (!f1.IsNil)
+            {
+                return f1;
+            }
+
+            var f2 = b.GetMetaMethod(f);
+            return f2;
+        }
+
+        public LuaObject Len()
+        {
+            if (IsString)
+                return AsString().Length;
+            else
+            {
+                var handler = GetMetaMethod(LuaEvents.LEN);
+                if (!handler.IsNil)
+                    return handler.Call(this)[0];
+                else if (IsTable)
+                    return AsTable().Count;
+                else
+                    throw new LuaException("Invalid op");
+            }
+        }
+
+        public LuaObject Concat(LuaObject op)
+        {
+            if ((IsString || IsNumber) && (op.IsString || op.IsNumber))
+                return string.Concat(this, op);
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.CONCAT);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+                else
+                    throw new LuaException("Invalid op");
+            }
+        }
+
+        public LuaObject Not()
+        {
+            if (!AsBool())
             {
                 return True;
             }
@@ -532,29 +572,118 @@ namespace NetLua
             }
         }
 
-        public static LuaObject operator +(LuaObject a, LuaObject b)
+        public static LuaObject operator !(LuaObject a)
         {
-            return LuaEvents.add_event(a, b);
+            return a.Not();
         }
 
-        public static LuaObject operator -(LuaObject a, LuaObject b)
+        public LuaObject Add(LuaObject op)
         {
-            return LuaEvents.sub_event(a, b);
+            if (TryConvertToNumber(out var a) && op.TryConvertToNumber(out var b))
+                return FromNumber(a + b);
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.ADD);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
         }
 
-        public static LuaObject operator *(LuaObject a, LuaObject b)
+        public static LuaObject operator +(LuaObject op1, LuaObject op2)
         {
-            return LuaEvents.mul_event(a, b);
+            return op1.Add(op2);
         }
 
-        public static LuaObject operator /(LuaObject a, LuaObject b)
+        public LuaObject Subtract(LuaObject op)
         {
-            return LuaEvents.div_event(a, b);
+            if (TryConvertToNumber(out var a) && op.TryConvertToNumber(out var b))
+                return FromNumber(a - b);
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.SUB);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
         }
 
-        public static LuaObject operator %(LuaObject a, LuaObject b)
+        public static LuaObject operator -(LuaObject op1, LuaObject op2)
         {
-            return LuaEvents.mod_event(a, b);
+            return op1.Subtract(op2);
+        }
+
+        public LuaObject Multiply(LuaObject op)
+        {
+            if (TryConvertToNumber(out var a) && op.TryConvertToNumber(out var b))
+                return FromNumber(a * b);
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.MUL);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        public static LuaObject operator *(LuaObject op1, LuaObject op2)
+        {
+            return op1.Multiply(op2);
+        }
+
+        public LuaObject Divide(LuaObject op)
+        {
+            if (TryConvertToNumber(out var a) && op.TryConvertToNumber(out var b))
+                return FromNumber(a / b);
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.DIV);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        public static LuaObject operator /(LuaObject op1, LuaObject op2)
+        {
+            return op1.Divide(op2);
+        }
+
+        public LuaObject Modulo(LuaObject op)
+        {
+            if (TryConvertToNumber(out var a) && op.TryConvertToNumber(out var b))
+                return FromNumber(a - Math.Floor(a / b) * b);
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.MOD);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        public static LuaObject operator %(LuaObject op1, LuaObject op2)
+        {
+            return op1.Modulo(op2);
+        }
+
+        public LuaObject Pow(LuaObject op)
+        {
+            if (TryConvertToNumber(out var a) && op.TryConvertToNumber(out var b))
+                return FromNumber(Math.Pow(a, b));
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.POW);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
         }
 
         // LuaEvents.pow
@@ -562,17 +691,64 @@ namespace NetLua
         //{
         //    return LuaEvents.pow_event(a, b);
         //}
-
-        public static LuaObject operator -(LuaObject a)
+        public LuaObject Negate()
         {
-            return LuaEvents.unm_event(a);
+            if (TryConvertToNumber(out var a))
+            {
+                return FromNumber(-a);
+            }
+            else
+            {
+                var handler = GetMetaMethod(LuaEvents.UNM);
+                if (!handler.IsNil)
+                    return handler.Call(this)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        public static LuaObject operator -(LuaObject op)
+        {
+            return op.Negate();
+        }
+
+        private bool BitwiseAnd(LuaObject op, out LuaObject result)
+        {
+            if (TryConvertToInt(out int value1) &&
+                op.TryConvertToInt(out int value2))
+            {
+                result = FromNumber(value1 & value2);
+                return true;
+            }
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.BITWISE_AND);
+                if (!handler.IsNil)
+                {
+                    result = handler.Call(this, op)[0];
+                    return true;
+                }
+            }
+
+            result = Nil;
+            return false;
+        }
+
+        public LuaObject BitwiseAnd(LuaObject op)
+        {
+            if (BitwiseAnd(op, out var result))
+            {
+                return result;
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
         }
 
         public static LuaObject operator &(LuaObject a, LuaObject b)
         {
             a ??= Nil;
             b ??= Nil;
-            if (LuaEvents.TryInvoke_band_event(a, b, out var result))
+            if (a.BitwiseAnd(b, out var result))
             {
                 return result;
             }
@@ -583,13 +759,45 @@ namespace NetLua
             {
                 return b;
             }
+        }
+
+        private bool BitwiseOr(LuaObject op, out LuaObject result)
+        {
+            if (TryConvertToInt(out int value1) &&
+                op.TryConvertToInt(out int value2))
+            {
+                result = FromNumber(value1 | value2);
+                return true;
+            }
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.BITWISE_OR);
+                if (!handler.IsNil)
+                {
+                    result = handler.Call(this, op)[0];
+                    return true;
+                }
+            }
+
+            result = Nil;
+            return false;
+        }
+
+        public LuaObject BitwiseOr(LuaObject op)
+        {
+            if (BitwiseOr(op, out var result))
+            {
+                return result;
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
         }
 
         public static LuaObject operator |(LuaObject a, LuaObject b)
         {
             a ??= Nil;
             b ??= Nil;
-            if (LuaEvents.TryInvoke_bor_event(a, b, out var result))
+            if (a.BitwiseOr(b, out var result))
             {
                 return result;
             }
@@ -602,14 +810,81 @@ namespace NetLua
                 return a;
         }
 
+        public LuaObject BitwiseXor(LuaObject op)
+        {
+            if (TryConvertToInt(out int value1) &&
+                op.TryConvertToInt(out int value2))
+            {
+                return FromNumber(value1 ^ value2);
+            }
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.BITWISE_XOR);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
         public static LuaObject operator ^(LuaObject a, LuaObject b)
         {
-            return LuaEvents.bxor_event(a, b);
+            return a.BitwiseXor(b);
+        }
+
+        public LuaObject BitwiseNot()
+        {
+            if (TryConvertToInt(out int value))
+            {
+                return FromNumber(~value);
+            }
+            else
+            {
+                var handler = GetMetaMethod(LuaEvents.BITWISE_NOT);
+                if (!handler.IsNil)
+                    return handler.Call()[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
         }
 
         public static LuaObject operator ~(LuaObject a)
         {
-            return LuaEvents.bnot_event(a);
+            return a.BitwiseNot();
+        }
+
+        public LuaObject ShiftLeft(LuaObject op)
+        {
+            if (TryConvertToInt(out int value1) &&
+                op.TryConvertToInt(out int value2))
+            {
+                return FromNumber(value1 << value2);
+            }
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.SHIFT_LEFT);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
+        }
+
+        public LuaObject ShiftRight(LuaObject op)
+        {
+            if (TryConvertToInt(out int value1) &&
+                op.TryConvertToInt(out int value2))
+            {
+                return FromNumber(value1 >> value2);
+            }
+            else
+            {
+                var handler = GetBinHandler(this, op, LuaEvents.SHIFT_RIGHT);
+                if (!handler.IsNil)
+                    return handler.Call(this, op)[0];
+            }
+
+            throw new LuaException("Invalid arithmetic operation");
         }
 
         //public static LuaObject operator <<(LuaObject a, int b)
@@ -622,60 +897,68 @@ namespace NetLua
         //    return LuaEvents.shr_event(a, b);
         //}
 
-        public static LuaObject operator <(LuaObject a, LuaObject b)
+        public int CompareTo(object obj)
         {
-            return LuaEvents.lt_event(a, b);
+            var luaObj = FromObject(obj);
+            if (LuaEquals(luaObj))
+            {
+                return 0;
+            }
+            return this < luaObj ? -1 : 1;
         }
 
-        public static LuaObject operator >(LuaObject a, LuaObject b)
+        public static bool operator <(LuaObject op1, LuaObject op2)
         {
-            return LuaEvents.lt_event(b, a);
+            if (op1.IsNumber && op2.IsNumber)
+                return op1.AsNumber() < op2.AsNumber();
+            else if (op1.IsString && op2.IsString)
+            {
+                int n = StringComparer.CurrentCulture.Compare(op1.AsString(), op2.AsString());
+                return (n < 0);
+            }
+            else
+            {
+                var handler = GetBinHandler(op1, op2, LuaEvents.LESS);
+                if (!handler.IsNil)
+                    return handler.Call(op1, op2)[0];
+                else
+                    throw new ArgumentException("attempt to compare " + op1.type.ToString() + " with " + op2.type.ToString());
+            }
         }
 
-        public static LuaObject operator <=(LuaObject a, LuaObject b)
+        public static bool operator >(LuaObject op1, LuaObject op2)
         {
-            return LuaEvents.le_event(a, b);
+            return !(op1 <= op2);
         }
 
-        public static LuaObject operator >=(LuaObject a, LuaObject b)
+        public static bool operator <=(LuaObject op1, LuaObject op2)
         {
-            return LuaEvents.le_event(b, a);
+            if (op1.IsNumber && op2.IsNumber)
+                return op1.AsNumber() <= op2.AsNumber();
+            else if (op1.IsString && op2.IsString)
+            {
+                int n = StringComparer.CurrentCulture.Compare(op1.AsString(), op2.AsString());
+                return (n <= 0);
+            }
+            else
+            {
+                var handler = GetBinHandler(op1, op2, LuaEvents.LESS_OR_EQUAL);
+                if (!handler.IsNil)
+                    return handler.Call(op1, op2)[0];
+                else
+                    return op1.LuaEquals(op2) || op1 < op2;
+            }
+        }
+
+        public static bool operator >=(LuaObject a, LuaObject b)
+        {
+            return !(a < b);
         }
 
         public static bool operator ==(LuaObject a, object b)
         {
-            if (b == null)
-                return LuaObject.FromObject(a).IsNil;
-
-            if (a == null || a.IsNil)
-            {
-                if (b == null)
-                    return true;
-                else
-                {
-                    if (b is LuaObject)
-                        return (b as LuaObject).IsNil;
-                    else
-                        return false;
-                }
-            }
-            else
-            {
-                if (b == null)
-                    return false;
-                else
-                {
-                    if (b is LuaObject)
-                    {
-                        if ((b as LuaObject).IsNil)
-                            return a.IsNil;
-
-                        return (b as LuaObject).luaobj.Equals(a.luaobj);
-                    }
-                    else
-                        return a.luaobj.Equals(b);
-                }
-            }
+            a ??= Nil;
+            return a.Equals(b);
         }
 
         public static bool operator !=(LuaObject a, object b)
@@ -685,7 +968,7 @@ namespace NetLua
 
         public IEnumerator<LuaTableItem> GetEnumerator()
         {
-            if (luaobj is IEnumerable<LuaTableItem> table)
+            if (_luaObj is IEnumerable<LuaTableItem> table)
             {
                 return table.GetEnumerator();
             }
@@ -702,50 +985,109 @@ namespace NetLua
         {
             get
             {
+                LuaObject handler;
+
                 if (IsTable)
                 {
-                    var table = AsTable();
-                    LuaObject obj;
-                    if (table.TryGetValue(key, out obj))
-                        return obj;
+                    var v = BasicLibrary.RawGet(this, key);
+                    if (!v.IsNil)
+                        return v;
                     else
-                        return LuaEvents.index_event(this, key);
+                    {
+                        handler = GetMetaMethod(LuaEvents.INDEX);
+                        if (handler.IsNil)
+                            return Nil;
+                    }
                 }
                 else
-                    return LuaEvents.index_event(this, key);
+                {
+                    handler = GetMetaMethod(LuaEvents.INDEX);
+                    if (handler.IsNil)
+                        throw new LuaException("Invalid argument");
+                }
+
+                if (handler.IsFunction)
+                    return handler.AsFunction()(new LuaObject[] { this, key })[0];
+                else if (!handler.IsNil)
+                    return handler[key];
+                else
+                    return Nil;
             }
             set
             {
+                LuaObject handler;
                 if (IsTable)
                 {
-                    var table = AsTable();
-                    LuaObject obj;
-                    if (table.TryGetValue(key, out obj))
-                        table[key] = value;
+                    var v = BasicLibrary.RawGet(this, key);
+                    if (!v.IsNil)
+                    {
+                        BasicLibrary.RawSet(this, key, value);
+                        return;
+                    }
                     else
-                        LuaEvents.newindex_event(this, key, value);
+                    {
+                        handler = GetMetaMethod(LuaEvents.NEW_INDEX);
+                        if (handler.IsNil)
+                        {
+                            BasicLibrary.RawSet(this, key, value);
+                            return;
+                        }
+                    }
                 }
                 else
-                    LuaEvents.newindex_event(this, key, value);
+                {
+                    handler = GetMetaMethod(LuaEvents.NEW_INDEX);
+                    if (handler.IsNil)
+                        throw new LuaException("Invalid op");
+                }
+
+                if (handler.IsFunction)
+                    handler.AsFunction()(new LuaObject[] { this, key, value });
+                else
+                    handler[key] = value;
             }
         }
 
         // Unlike AsString, this will return string representations of nil, tables, and functions
         public override string ToString()
         {
+            var toStringMethod = GetMetaMethod(LuaEvents.TO_STRING);
+            if (toStringMethod != Nil)
+            {
+                return toStringMethod.Call(this)[0].AsString();
+            }
+
+            var nameField = GetMetaMethod(LuaEvents.NAME);
+            if (nameField != Nil)
+            {
+                var name = nameField.ToString();
+                if (IsTable)
+                {
+                    return $"{name}: {RuntimeHelpers.GetHashCode(this)}";
+                }
+                else
+                {
+                    return name;
+                }
+            }
+            
             if (IsNil)
+            {
                 return "nil";
-
+            }
             if (IsTable)
-                return "table";
-
+            {
+                return $"table: {RuntimeHelpers.GetHashCode(this)}";
+            }
             if (IsFunction)
-                return "function";
-
+            {
+                return $"function: {RuntimeHelpers.GetHashCode(this)}";
+            }
             if (IsBool)
-                return luaobj.ToString().ToLower();
-
-            return luaobj.ToString();
+            {
+                return _luaObj.ToString().ToLower();
+            }
+            return _luaObj.ToString();
         }
 
         public override bool Equals(object obj)
@@ -753,24 +1095,51 @@ namespace NetLua
             if (obj is LuaObject otherLuaObj)
                 return Equals(otherLuaObj);
             else
-                return Equals(luaobj, obj);
+                return Equals(_luaObj, obj);
         }
 
         public bool Equals(LuaObject other)
         {
-            return luaobj.Equals(other.luaobj);
+            if (_luaObj == null)
+            {
+                return other._luaObj == null;
+            }
+            return _luaObj.Equals(other._luaObj);
+        }
+
+        public bool LuaEquals(LuaObject other)
+        {
+            static LuaObject GetEqualHandler(LuaObject a, LuaObject b)
+            {
+                if ((a.Type != b.Type) || (a.IsTable && b.IsUserData))
+                    return Nil;
+                var mm1 = a.GetMetaMethod(LuaEvents.EQUAL);
+                var mm2 = b.GetMetaMethod(LuaEvents.EQUAL);
+                if (mm1 == mm2)
+                    return mm1;
+                else
+                    return Nil;
+            }
+
+            if (this == other)
+                return true;
+            var handler = GetEqualHandler(this, other);
+            if (!handler.IsNil)
+                return handler.Call(this, other)[0];
+            else
+                return false;
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return (luaobj != null ? luaobj.GetHashCode() : 0) ^ (byte)type;
+                return (_luaObj != null ? _luaObj.GetHashCode() : 0) ^ (byte)type;
             }
         }
 
         /// <summary>
-        /// Calls the object passing the instance as first argument. Uses the metafield __call
+        /// Calls the object passing the instance as first argument. Uses the metaField __call
         /// </summary>
         /// <param name="instance">The object to be passed as first argument</param>
         /// <param name="args">Arguments to be passed after the object</param>
@@ -787,7 +1156,7 @@ namespace NetLua
         }
 
         /// <summary>
-        /// Calls the object. If this is not a function, it calls the metatable field __call
+        /// Calls the object. If this is not a function, it calls the metaTable field __call
         /// </summary>
         /// <param name="args">The arguments to pass</param>
         public LuaArguments Call(params LuaObject[] args)
@@ -796,24 +1165,78 @@ namespace NetLua
         }
 
         /// <summary>
-        /// Calls the object. If this is not a function, it calls the metatable field __call
+        /// Calls the object. If this is not a function, it calls the metaTable field __call
         /// </summary>
         /// <param name="args">The arguments to pass</param>
         public LuaArguments Call(LuaArguments args)
         {
-            return LuaEvents.call_event(this, args);
+            if (IsFunction)
+                return AsFunction()(args);
+            else
+            {
+                var handler = GetMetaMethod(LuaEvents.CALL);
+                if (handler.IsFunction)
+                {
+                    return handler.AsFunction()(args.Prepend(this).ToArray());
+                }
+                else
+                    throw new LuaException("Cannot call non function");
+            }
+        }
+
+        public LuaObject GetMetaTable()
+        {
+            var metaTable = _metaTable ?? Nil;
+            if (metaTable.Type != LuaType.table)
+            {
+                return metaTable;
+            }
+
+            var __metaTable = metaTable[LuaEvents.META_TABLE];
+            if (__metaTable != null)
+            {
+                metaTable = __metaTable;
+            }
+            return metaTable;
+        }
+
+        public LuaObject SetMetaTable(LuaObject metaTable, bool force)
+        {
+            if (force)
+            {
+                _metaTable = metaTable;
+                return this;
+            }
+
+            var oldMetaTable = _metaTable;
+            if (oldMetaTable.IsTable && oldMetaTable.AsTable().ContainsKey(LuaEvents.META_TABLE))
+            {
+                throw new LuaException("cannot change a protected metaTable");
+            }
+            _metaTable = metaTable;
+            return this;
+        }
+
+        public LuaObject GetMetaMethod(string e)
+        {
+            var metaTable = GetMetaTable();
+            if (metaTable.IsNil)
+            {
+                return Nil;
+            }
+            return metaTable[e];
         }
 
         #region DynamicObject
 
         /// <summary>
-        /// Gets a standard .NET value froma LuaObject
+        /// Gets a standard .NET value from LuaObject
         /// </summary>
-        /// <returns>The LuaObject is <paramref name="a"/> is a function or a table, its underlying luaobj if not</returns>
-        internal static object getObject(LuaObject a)
+        /// <returns>The LuaObject is <paramref name="a"/> is a function or a table, its underlying _luaObj if not</returns>
+        internal static object GetObject(LuaObject a)
         {
             if (a.Type != LuaType.table && a.Type != LuaType.function)
-                return a.luaobj;
+                return a._luaObj;
             else
                 return a;
         }
@@ -826,36 +1249,35 @@ namespace NetLua
                 return false;
             else
             {
-                result = getObject(obj);
+                result = GetObject(obj);
                 return true;
             }
         }
 
         public override bool TrySetMember(SetMemberBinder binder, object value)
         {
-            if (value is LuaObject)
-                this[binder.Name] = (LuaObject)value;
+            if (value is LuaObject v)
+                this[binder.Name] = v;
             else
-                this[binder.Name] = LuaObject.FromObject(value);
+                this[binder.Name] = FromObject(value);
             return true;
         }
 
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result)
         {
-            LuaObject[] passingArgs = Array.ConvertAll<object, LuaObject>(args,
-                x => (x is LuaObject ? (LuaObject)x : LuaObject.FromObject(x)));
-            LuaArguments ret = this.Call(passingArgs);
+            LuaObject[] passingArgs = Array.ConvertAll(args, FromObject);
+            LuaArguments ret = Call(passingArgs);
             if (ret.Length == 1)
             {
                 if (ret[0].IsNil)
                     result = null;
                 else
-                    result = getObject(ret[0]);
+                    result = GetObject(ret[0]);
                 return true;
             }
             else
             {
-                object[] res = Array.ConvertAll<LuaObject, object>(ret.ToArray(), x => getObject(x));
+                object[] res = Array.ConvertAll(ret.ToArray(), x => GetObject(x));
                 result = res;
                 return true;
             }

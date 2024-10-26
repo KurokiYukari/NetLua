@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetLua", "NetLua\NetLua.csp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LuaUnits", "LuaUnits\LuaUnits.csproj", "{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLua.Interop", "NetLua.Interop\NetLua.Interop.csproj", "{A2FB0605-582F-4A2B-8536-8286B953818E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,18 @@ Global
 		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|x86.ActiveCfg = Release|Any CPU
 		{33B033CA-6AD2-4603-B3D7-0C2718C0D14E}.Release|x86.Build.0 = Release|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Debug|x86.Build.0 = Debug|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Release|x86.ActiveCfg = Release|Any CPU
+		{A2FB0605-582F-4A2B-8536-8286B953818E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

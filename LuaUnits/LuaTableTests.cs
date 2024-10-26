@@ -17,7 +17,7 @@ namespace LuaUnits
         [Test]
         public static void FirstTableTest()
         {
-            NetLua.Lua lua = new NetLua.Lua();
+            var lua = Lua.CreateDefaultEnv();
             lua.DoString(
 @" a={}
 k = 'x'
@@ -36,7 +36,7 @@ a[20] = 'great'");
         [Test]
         public static void SecondTableTest()
         {
-            NetLua.Lua lua = new NetLua.Lua();
+            var lua = Lua.CreateDefaultEnv();
             lua.DoString(
 @" a={}
 a['x'] = 10        

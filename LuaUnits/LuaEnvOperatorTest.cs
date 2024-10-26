@@ -201,7 +201,7 @@ namespace LuaUnits
 
         private static LuaObject Run(string code)
         {
-            var lua = new Lua();
+            var lua = Lua.CreateDefaultEnv();
             return lua.DoString($"return\r\n{code}")[0];
         }
     }
