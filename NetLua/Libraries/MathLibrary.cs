@@ -5,64 +5,125 @@ using System.Text;
 
 namespace NetLua
 {
-    public static class MathLibrary
+    public class MathLibrary : ILuaLibrary
     {
-        static LuaArguments math_abs(LuaArguments args)
+        private Random _random = Random.Shared;
+
+        public static MathLibrary Instance { get; } = new MathLibrary();
+
+        public void AddLibrary(LuaContext Context)
+        {
+            var math = LuaObject.NewTable();
+            math["abs"] = (LuaFunction)abs;
+            math["acos"] = (LuaFunction)acos;
+            math["asin"] = (LuaFunction)asin;
+            math["atan"] = (LuaFunction)atan;
+            math["atan2"] = (LuaFunction)atan2;
+            math["ceil"] = (LuaFunction)ceil;
+            math["cos"] = (LuaFunction)cos;
+            math["cosh"] = (LuaFunction)cosh;
+            math["deg"] = (LuaFunction)deg;
+            math["exp"] = (LuaFunction)exp;
+            math["floor"] = (LuaFunction)floor;
+            math["fmod"] = (LuaFunction)fmod;
+            math["huge"] = LuaObject.FromNumber(double.MaxValue);
+            math["log"] = (LuaFunction)log;
+            math["max"] = (LuaFunction)max;
+            math["maxinteger"] = LuaObject.FromNumber(long.MaxValue);
+            math["min"] = (LuaFunction)min;
+            math["mininteger"] = LuaObject.FromNumber(long.MinValue);
+            math["modf"] = (LuaFunction)modf;
+            math["pi"] = Math.PI;
+            math["pow"] = (LuaFunction)pow;
+            math["rad"] = (LuaFunction)rad;
+            math["random"] = (LuaFunction)random;
+            math["randomseed"] = (LuaFunction)randomseed;
+            math["sin"] = (LuaFunction)sin;
+            math["sinh"] = (LuaFunction)sinh;
+            math["sqrt"] = (LuaFunction)sqrt;
+            math["tan"] = (LuaFunction)tan;
+            math["tointeger"] = (LuaFunction)tointeger;
+            math["tanh"] = (LuaFunction)tanh;
+            math["type"] = (LuaFunction)type;
+            math["ult"] = (LuaFunction)ult;
+
+            Context.Set("math", math);
+        }
+
+        static LuaArguments abs(LuaArguments args)
         {
             return Lua.Return(Math.Abs(args[0]));
         }
 
-        static LuaArguments math_acos(LuaArguments args)
+        static LuaArguments acos(LuaArguments args)
         {
             return Lua.Return(Math.Acos(args[0]));
         }
 
-        static LuaArguments math_asin(LuaArguments args)
+        static LuaArguments asin(LuaArguments args)
         {
             return Lua.Return(Math.Asin(args[0]));
         }
 
-        static LuaArguments math_atan(LuaArguments args)
+        static LuaArguments atan(LuaArguments args)
         {
             return Lua.Return(Math.Atan(args[0]));
         }
 
-        static LuaArguments math_atan2(LuaArguments args)
+        static LuaArguments atan2(LuaArguments args)
         {
             return Lua.Return(Math.Atan2(args[0], args[1]));
         }
 
-        static LuaArguments math_ceil(LuaArguments args)
+        static LuaArguments ceil(LuaArguments args)
         {
             return Lua.Return(Math.Ceiling(args[0]));
         }
 
-        static LuaArguments math_cos(LuaArguments args)
+        static LuaArguments cos(LuaArguments args)
         {
             return Lua.Return(Math.Cos(args[0]));
         }
 
-        static LuaArguments math_cosh(LuaArguments args)
+        static LuaArguments cosh(LuaArguments args)
         {
             return Lua.Return(Math.Cosh(args[0]));
         }
 
-        static LuaArguments math_exp(LuaArguments args)
+        static LuaArguments deg(LuaArguments args)
+        {
+            var radius = GuardLibrary.EnsureNumber(args, 0, "deg");
+            return Lua.Return(radius / Math.PI * 180);
+        }
+
+        static LuaArguments exp(LuaArguments args)
         {
             return Lua.Return(Math.Exp(args[0]));
         }
 
-        static LuaArguments math_floor(LuaArguments args)
+        static LuaArguments floor(LuaArguments args)
         {
             return Lua.Return(Math.Floor(args[0]));
         }
 
-        static LuaArguments math_log(LuaArguments args)
+        static LuaArguments fmod(LuaArguments args)
+        {
+            var x = GuardLibrary.EnsureNumber(args, 0, nameof(fmod));
+            var y = GuardLibrary.EnsureNumber(args, 1, nameof(fmod));
+            if (y == 0)
+            {
+                GuardLibrary.ArgumentError(2, nameof(fmod), "zero");
+            }
+            var factor = (int)(x / y);
+            return Lua.Return(x - factor * y);
+        }
+
+        static LuaArguments log(LuaArguments args)
         {
             return Lua.Return(Math.Log(args[0], args[1] | Math.E));
         }
 
-        static LuaArguments math_max(LuaArguments args)
+        static LuaArguments max(LuaArguments args)
         {
             var max = args[0];
             foreach (LuaObject o in args)
@@ -72,7 +133,7 @@ namespace NetLua
             return Lua.Return(max);
         }
 
-        static LuaArguments math_min(LuaArguments args)
+        static LuaArguments min(LuaArguments args)
         {
             var min = args[0];
             foreach (LuaObject o in args)
@@ -82,62 +143,140 @@ namespace NetLua
             return Lua.Return(min);
         }
 
-        static LuaArguments math_pow(LuaArguments args)
+        static LuaArguments modf(LuaArguments args)
+        {
+            var x = GuardLibrary.EnsureNumber(args, 0, nameof(modf));
+            var intPart = (int)x;
+            var floatPart = x - intPart;
+            return Lua.Return(intPart, floatPart);
+        }
+
+        static LuaArguments rad(LuaArguments args)
+        {
+            var x = GuardLibrary.EnsureNumber(args, 0, nameof(rad));
+            return Lua.Return(x / 180 * Math.PI);
+        }
+
+        static LuaArguments pow(LuaArguments args)
         {
             return Lua.Return(Math.Pow(args[0], args[1]));
         }
 
-        static LuaArguments math_sin(LuaArguments args)
+        LuaArguments random(LuaArguments args)
+        {
+            var random = _random;
+            if (args.Length == 0)
+            {
+                return Lua.Return(Random.Shared.NextDouble());
+            }
+            var m = GuardLibrary.EnsureIntNumber(args, 0, nameof(random));
+            if (args.Length == 1)
+            {
+                if (m == 0)
+                {
+                    return Lua.Return(LuaObject.FromNumber(random.NextInt64(long.MinValue, long.MaxValue)));
+                }
+                else
+                {
+                    return Lua.Return(LuaObject.FromNumber(random.NextInt64(1, m)));
+                }
+            }
+            else
+            {
+                var n = GuardLibrary.EnsureIntNumber(args, 1, nameof(random));
+                return Lua.Return(LuaObject.FromNumber(random.NextInt64(m, n)));
+            }
+        }
+
+        LuaArguments randomseed(LuaArguments args)
+        {
+            Random random;
+            if (args.Length == 0)
+            {
+                random = Random.Shared;
+            }
+            else if (args.Length == 1)
+            {
+                var x = GuardLibrary.EnsureIntNumber(args, 0, nameof(randomseed));
+                random = new Random((int)x);
+            }
+            else
+            {
+                var x = GuardLibrary.EnsureIntNumber(args, 0, nameof(randomseed));
+                var y = GuardLibrary.EnsureIntNumber(args, 1, nameof(randomseed));
+                random = new Random((int)x ^ (int)y);
+            }
+            _random = random;
+            return Lua.Return(LuaObject.FromNumber(random.NextInt64()), LuaObject.FromNumber(random.NextInt64()));
+        }
+
+        static LuaArguments sin(LuaArguments args)
         {
             return Lua.Return(Math.Sin(args[0]));
         }
 
-        static LuaArguments math_sinh(LuaArguments args)
+        static LuaArguments sinh(LuaArguments args)
         {
             return Lua.Return(Math.Sinh(args[0]));
         }
 
-        static LuaArguments math_sqrt(LuaArguments args)
+        static LuaArguments sqrt(LuaArguments args)
         {
             return Lua.Return(Math.Sqrt(args[0]));
         }
 
-        static LuaArguments math_tan(LuaArguments args)
+        static LuaArguments tan(LuaArguments args)
         {
             return Lua.Return(Math.Tan(args[0]));
         }
 
-        static LuaArguments math_tanh(LuaArguments args)
+        static LuaArguments tointeger(LuaArguments args)
+        {
+            GuardLibrary.HasLengthAtLeast(args, 1, nameof(tointeger));
+            if (args[0].TryConvertToInt(out var i))
+            {
+                return Lua.Return(LuaObject.FromNumber(i));
+            }
+            return Lua.Return(LuaObject.Nil);
+        }
+
+        static LuaArguments tanh(LuaArguments args)
         {
             return Lua.Return(Math.Tanh(args[0]));
         }
 
-        public static void AddMathLibrary(LuaContext Context)
+        static LuaArguments type(LuaArguments args)
         {
-            var math = LuaObject.NewTable();
-            math["abs"] = (LuaFunction)math_abs;
-            math["acos"] = (LuaFunction)math_acos;
-            math["asin"] = (LuaFunction)math_asin;
-            math["atan"] = (LuaFunction)math_atan;
-            math["atan2"] = (LuaFunction)math_atan2;
-            math["ceil"] = (LuaFunction)math_ceil;
-            math["cos"] = (LuaFunction)math_cos;
-            math["cosh"] = (LuaFunction)math_cosh;
-            math["exp"] = (LuaFunction)math_exp;
-            math["floor"] = (LuaFunction)math_floor;
-            math["log"] = (LuaFunction)math_log;
-            math["max"] = (LuaFunction)math_max;
-            math["min"] = (LuaFunction)math_min;
-            math["pow"] = (LuaFunction)math_pow;
-            math["sin"] = (LuaFunction)math_sin;
-            math["sinh"] = (LuaFunction)math_sinh;
-            math["sqrt"] = (LuaFunction)math_sqrt;
-            math["tan"] = (LuaFunction)math_tan;
-            math["tanh"] = (LuaFunction)math_tanh;
+            GuardLibrary.HasLengthAtLeast(args, 1, nameof(type));
+            var x = args[0];
+            if (x.type == LuaType.number)
+            {
+                if (x._luaObj is long)
+                {
+                    return Lua.Return("integer");
+                }
+                else
+                {
+                    return Lua.Return("float");
+                }
+            }
 
-            math["pi"] = Math.PI;
+            return Lua.Return(LuaObject.Nil);
+        }
 
-            Context.Set("math", math);
+        static LuaArguments ult(LuaArguments args)
+        {
+            GuardLibrary.HasLengthAtLeast(args, 2, nameof(ult));
+            var m = GuardLibrary.EnsureIntNumber(args, 0, nameof(ult));
+            var n = GuardLibrary.EnsureIntNumber(args, 1, nameof(ult));
+            if (m < 0)
+            {
+                return Lua.Return(LuaObject.False);
+            }
+            else
+            {
+                return Lua.Return(m < n);
+            }
         }
     }
 }

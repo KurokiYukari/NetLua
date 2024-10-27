@@ -35,5 +35,29 @@ namespace NetLua
                 BasicLibrary.Error($"bad argument #{index + 1} {(name == null ? string.Empty : $"'{name}' ")}({type} expected, got {arg.Type})");
             }
         }
+
+        public static double EnsureNumber(LuaArguments args, int index, string name)
+        {
+            var arg = args[index];
+            if (arg.TryConvertToNumber(out var value))
+            {
+                return value;
+            }
+
+            ArgumentError(index + 1, name, $"number expected, got {arg.Type}");
+            return 0;
+        }
+
+        public static long EnsureIntNumber(LuaArguments args, int index, string name)
+        {
+            var arg = args[index];
+            if (arg.TryConvertToInt(out var value))
+            {
+                return value;
+            }
+
+            ArgumentError(index + 1, name, $"number expected, got {arg.Type}");
+            return 0;
+        }
     }
 }

@@ -35,6 +35,7 @@ namespace NetLua
         {
             var context = new LuaContext(null, null, parserGetter);
             BasicLibrary.Instance.AddLibrary(context);
+            MathLibrary.Instance.AddLibrary(context);
             return context;
         }
     }
