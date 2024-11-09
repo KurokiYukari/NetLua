@@ -35,7 +35,7 @@ namespace NetLua
             context.Set("error", LuaObject.FromFunction(args =>
             {
                 GuardLibrary.HasLengthAtLeast(args, 1);
-                int? level = args[1].AsInt();
+                long? level = args[1].AsInt();
                 Error(args[0], level);
                 return Lua.Return();
             }));
@@ -199,7 +199,7 @@ namespace NetLua
         /// <param name="message"></param>
         /// <param name="level"></param>
         [DoesNotReturn]
-        public static void Error(LuaObject message, int? level = null)
+        public static void Error(LuaObject message, long? level = null)
         {
             // TODO: support level
             throw new LuaException(message.ToString());
@@ -514,7 +514,7 @@ namespace NetLua
         /// <param name="e"></param>
         /// <param name="base"></param>
         /// <returns></returns>
-        public static double? ToNumber(LuaContext context, LuaObject e, int? @base = null)
+        public static double? ToNumber(LuaContext context, LuaObject e, long? @base = null)
         {
             if (@base == null)
             {
@@ -545,7 +545,7 @@ namespace NetLua
                 var baseValue = @base.Value;
                 if (baseValue >= 2 && baseValue <= 36)
                 {
-                    if (TryConvertToBaseAlpha(e.AsString(), baseValue, out int result))
+                    if (TryConvertToBaseAlpha(e.AsString(), baseValue, out long result))
                     {
                         return result;
                     }
@@ -643,10 +643,10 @@ namespace NetLua
             }
         }
 
-        private static bool TryConvertToBaseAlpha(string alpha, int @base, out int result)
+        private static bool TryConvertToBaseAlpha(string alpha, long @base, out long result)
         {
             result = 0;
-            int intPower = 1;
+            long intPower = 1;
 
             for (int i = alpha.Length - 1; i >= 0 ; i--)
             {
