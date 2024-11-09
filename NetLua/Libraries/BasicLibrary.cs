@@ -125,7 +125,7 @@ namespace NetLua
             context.Set("tonumber", LuaObject.FromFunction(args =>
             {
                 GuardLibrary.HasLengthAtLeast(args, 1);
-                int? @base = null;
+                long? @base = null;
                 if (args.Length > 1)
                 {
                     var baseArg = args[1];
@@ -454,8 +454,9 @@ namespace NetLua
         {
             if (index.IsNumber)
             {
-                if (index.TryConvertToInt(out int intIndex))
+                if (index.TryConvertToInt(out long longIndex))
                 {
+                    var intIndex = (int)longIndex;
                     if (intIndex == 0 || index > args.Length || index < -args.Length)
                     {
                         GuardLibrary.ArgumentError(1, "select", GuardLibrary.INDEX_OUT_OF_RANGE);

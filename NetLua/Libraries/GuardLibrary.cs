@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace NetLua
 {
     public class GuardLibrary : ILuaLibrary
@@ -18,6 +20,7 @@ namespace NetLua
             }
         }
 
+        [DoesNotReturn]
         public static void ArgumentError(int index, string name, string message)
         {
             BasicLibrary.Error($"bad argument #{index} to '{name}' ({message})");
@@ -34,6 +37,12 @@ namespace NetLua
             {
                 BasicLibrary.Error($"bad argument #{index + 1} {(name == null ? string.Empty : $"'{name}' ")}({type} expected, got {arg.Type})");
             }
+        }
+
+        [DoesNotReturn]
+        public static void ArgumentTypeError(LuaArguments args, int index, string type, string name)
+        {
+            ArgumentError(index + 1, name, $"{type} excepted, got {args[index].Type}");
         }
 
         public static double EnsureNumber(LuaArguments args, int index, string name)

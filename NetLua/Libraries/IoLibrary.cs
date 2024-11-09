@@ -4,113 +4,396 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Runtime.Serialization;
+using System.Diagnostics;
 
 namespace NetLua
 {
-    public static class IoLibrary
+    public class IoLibrary : ILuaLibrary
     {
-        // TODO: implement lines, read
-        class FileObject
-        {
-            public FileObject(Stream s)
-            {
-                stream = s;
-                if (s.CanRead)
-                    reader = new StreamReader(s);
-                if (s.CanWrite)
-                    writer = new StreamWriter(s);
-            }
+        readonly LuaObject _fileMetaTable = LuaObject.NewTable();
 
-            public Stream stream;
-            public StreamReader reader;
-            public StreamWriter writer;
+        public IoLibrary()
+        {
+            var __index = LuaObject.NewTable();
+            _fileMetaTable["__index"] = __index;
+
+            __index["close"] = new LuaFunction(FileObject.Close);
+            __index["flush"] = new LuaFunction(FileObject.Flush);
+            __index["lines"] = new LuaFunction(FileObject.Lines);
+            __index["read"] = new LuaFunction(FileObject.Read);
+            __index["write"] = new LuaFunction(FileObject.Write);
+            __index["seek"] = new LuaFunction(FileObject.Seek);
         }
 
-        static LuaObject FileMetatable = LuaObject.NewTable();
-
-        static LuaObject currentInput = LuaObject.Nil, currentOutput = LuaObject.Nil;
-
-        static bool isStream(LuaObject obj)
-        {
-            return (obj.IsUserData && obj._luaObj is FileObject);
-        }
-
-        static LuaObject CreateFileObject(Stream stream)
-        {
-            LuaObject obj = LuaObject.FromObject(new FileObject(stream));
-            obj.SetMetaTable(FileMetatable, true);
-
-            return obj;
-        }
-
-        static LuaObject CreateFileObject(Stream stream, bool autoflush)
-        {
-            FileObject fobj = new FileObject(stream);
-            fobj.writer.AutoFlush = autoflush;
-            LuaObject obj = LuaObject.FromObject(fobj);
-            obj.SetMetaTable(FileMetatable, true);
-
-            return obj;
-        }
-
-        public static void AddIoLibrary(LuaContext Context)
+        public void AddLibrary(LuaContext context)
         {
             var io = LuaObject.NewTable();
 
-            var __index = LuaObject.NewTable();
-            FileMetatable["__index"] = __index;
+            var process = Process.GetCurrentProcess();
+            var stdin = LuaObject.FromObject(new FileObject(null, process.StandardInput));
+            stdin.SetMetaTable(_fileMetaTable, true);
+            io["stdin"] = stdin;
+            var stdout = LuaObject.FromObject(new FileObject(process.StandardOutput, null));
+            stdout.SetMetaTable(_fileMetaTable, true);
+            io["stdout"] = stdout;
+            var stderr = LuaObject.FromObject(new FileObject(process.StandardError, null));
+            stderr.SetMetaTable(_fileMetaTable, true);
+            io["stderr"] = stderr;
 
-            __index["write"] = (LuaFunction)write;
-            __index["close"] = (LuaFunction)close;
-            __index["flush"] = (LuaFunction)flush;
-            __index["flush"] = (LuaFunction)seek;
-            __index["flush"] = (LuaFunction)read;
+            var currentInput = stdin;
+            var currentOutput = stdout;
 
-            io["open"] = (LuaFunction)io_open;
-            io["type"] = (LuaFunction)io_type;
-            io["input"] = (LuaFunction)io_input;
-            io["output"] = (LuaFunction)io_output;
-            io["temp"] = (LuaFunction)io_temp;
-            io["flush"] = (LuaFunction)io_flush;
-            io["write"] = (LuaFunction)io_write;
-            io["read"] = (LuaFunction)io_read;
+            var outputFunc = new LuaFunction(args =>
+            {
+                if (args.Length > 0)
+                {
+                    var obj = args[0];
+                    if (TryGetFileObject(obj, out _))
+                    {
+                        currentOutput = obj;
+                    }
+                    else if (obj.IsString)
+                    {
+                        currentOutput = io_open(Lua.Return(obj, "a"))[0];
+                    }
+                    else
+                    {
+                        GuardLibrary.ArgumentTypeError(args, 0, FileObject.TYPE_NAME, "output");
+                    }
+                }
 
-            currentInput = CreateFileObject(Console.OpenStandardInput());
-            currentOutput = CreateFileObject(Console.OpenStandardOutput(), true);
-            io["stdin"] = currentInput;
-            io["stdout"] = currentOutput;
-            io["stderr"] = CreateFileObject(Console.OpenStandardError(), true);
+                return Lua.Return(currentOutput);
+            });
 
-            Context.Set("io", io);
+            var inputFunc = new LuaFunction(args =>
+            {
+                if (args.Length > 0)
+                {
+                    var obj = args[0];
+                    if (TryGetFileObject(obj, out _))
+                    {
+                        currentInput = obj;
+                    }
+                    else if (obj.IsString)
+                    {
+                        currentInput = io_open(args)[0];
+                    }
+                    else
+                    {
+                        GuardLibrary.ArgumentTypeError(args, 0, FileObject.TYPE_NAME, "input");
+                    }
+                }
+
+                return Lua.Return(currentInput);
+            });
+
+            io["close"] = new LuaFunction(args =>
+            {
+                FileObject output = null;
+                if (args.Length == 0)
+                {
+                    if (TryGetFileObject(currentOutput, out var file))
+                    {
+                        output = file;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException();
+                    }
+                }
+                else
+                {
+                    if (TryGetFileObject(args[0], out var file))
+                    {
+                        output = file;
+                    }
+                    else
+                    {
+                        GuardLibrary.ArgumentTypeError(args, 0, FileObject.TYPE_NAME, "close");
+                    }
+                }
+                output.Close();
+                return Lua.Return();
+            });
+            io["flush"] = new LuaFunction(args =>
+            {
+                var file = outputFunc(args)[0];
+                return file["flush"].MethodCall(file, Lua.Return());
+            });
+            io["input"] = new LuaFunction(inputFunc);
+            io["lines"] = new LuaFunction(args =>
+            {
+                if (args.Length == 0)
+                {
+                    return currentOutput["lines"].Call("1");
+                }
+                else
+                {
+                    var file = io_open(Lua.Return(args[0]));
+                    return file[0]["lines"].Call(args.Skip(1).ToArray());
+                }
+            });
+            io["open"] = new LuaFunction(io_open);
+            io["output"] = new LuaFunction(outputFunc);
+            io["popen"] = new LuaFunction(io_popen);
+            io["read"] = new LuaFunction(args =>
+            {
+                var file = inputFunc(Lua.Return())[0];
+                return file["read"].MethodCall(file, args);
+            });
+            io["tmpfile"] = new LuaFunction(io_tmpfile);
+            io["type"] = new LuaFunction(io_type);
+            io["write"] = new LuaFunction(args =>
+            {
+                var file = outputFunc(Lua.Return())[0];
+                return file["write"].MethodCall(file, args);
+            });
+
+            context.Set("io", io);
         }
 
-        static LuaArguments io_open(LuaArguments args)
+        public class FileObject
+        {
+            public const string TYPE_NAME = "FILE*";
+
+            public FileObject(Stream s)
+            {
+                Stream = s;
+                if (s.CanRead)
+                    Reader = new StreamReader(s);
+                if (s.CanWrite)
+                    Writer = new StreamWriter(s);
+            }
+
+            public FileObject(StreamReader reader, StreamWriter writer)
+            {
+                Reader = reader;
+                Writer = writer;
+            }
+
+            public Stream Stream { get; set; }
+            public StreamReader Reader { get; set; }
+            public StreamWriter Writer { get; set; }
+
+            public static LuaArguments Write(LuaArguments args)
+            {
+                var self = args[0];
+                if (TryGetFileObject(self, out var fObj))
+                {
+                    foreach (var arg in args)
+                    {
+                        if (arg == self)
+                            continue;
+
+                        if (!(arg.IsString || arg.IsNumber))
+                            Lua.Return();
+
+                        if (fObj.Stream.CanWrite)
+                            fObj.Writer.Write(arg.ToString());
+                        else
+                            Lua.Return();
+                    }
+                    return Lua.Return(self);
+                }
+                else
+                    return Lua.Return();
+            }
+
+            public void Close()
+            {
+                Stream?.Close();
+            }
+
+            public static LuaArguments Lines(LuaArguments args)
+            {
+                if (TryGetFileObject(args[0], out var file))
+                {
+                    var readLine = new LuaFunction(args =>
+                    {
+                        var reader = file.Reader;
+                        if (reader == null)
+                        {
+                            return Lua.Return(LuaObject.Nil);
+                        }
+                        var line = reader.ReadLine();
+                        return Lua.Return(line);
+                    });
+                    return Lua.Return(readLine, LuaObject.Nil, LuaObject.Nil);
+                }
+                throw new InvalidOperationException();
+            }
+
+            public static LuaArguments Close(LuaArguments args)
+            {
+                var obj = args[0];
+                if (TryGetFileObject(obj, out var file))
+                {
+                    file.Close();
+                }
+                return Lua.Return();
+            }
+
+            public static LuaArguments Flush(LuaArguments args)
+            {
+                var obj = args[0];
+                if (TryGetFileObject(obj, out var file))
+                {
+                    file.Writer?.Flush();
+                }
+                return Lua.Return();
+            }
+
+            public static LuaArguments Seek(LuaArguments args)
+            {
+                var obj = args[0];
+                var whence = args[1] | "cur";
+                var offset = args[2] | 0;
+
+                if (TryGetFileObject(obj, out var fObj))
+                {
+                    switch (whence.ToString())
+                    {
+                        case "cur":
+                            fObj.Stream.Position += (long)offset; break;
+                        case "set":
+                            fObj.Stream.Position = (long)offset; break;
+                        case "end":
+                            fObj.Stream.Position = fObj.Stream.Length + (long)offset; break;
+                    }
+                    return Lua.Return(fObj.Stream.Position);
+                }
+                return Lua.Return();
+            }
+
+            public static LuaArguments Read(LuaArguments args)
+            {
+                var self = args[0];
+                if (TryGetFileObject(self, out var file))
+                {
+                    if (args.Length == 1)
+                    {
+                        var line = file.Reader.ReadLine();
+                        return Lua.Return(line);
+                    }
+                    else
+                    {
+                        var ret = new List<LuaObject>();
+                        foreach (var arg in args)
+                        {
+                            if (arg == self)
+                                continue;
+                            if (arg.IsNumber)
+                            {
+                                var bld = new StringBuilder();
+                                for (int i = 0; i < arg; i++)
+                                {
+                                    bld.Append((char)file.Reader.Read());
+                                }
+                                ret.Add(bld.ToString());
+                            }
+                            else if (arg == "a")
+                                ret.Add(file.Reader.ReadToEnd());
+                            else if (arg == "l")
+                                ret.Add(file.Reader.ReadLine());
+                            else if (arg == "L")
+                            {
+                                var bld = new StringBuilder();
+                                bool hasBreakLine = false;
+                                int c = file.Reader.Read();
+                                while (c >= 0)
+                                {
+                                    if (hasBreakLine)
+                                    {
+                                        if (c != '\n' && c != '\r')
+                                        {
+                                            break;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (c == '\n' || c == '\r')
+                                        {
+                                            hasBreakLine = true;
+                                        }
+                                    }
+                                    bld.Append((char)c);
+                                    c = file.Reader.Read();
+                                };
+                                ret.Add(bld.ToString());
+                            }
+                            else if (arg == "n")
+                            {
+                                //TODO: Implement io.read("*n")
+                                throw new NotImplementedException();
+                            }
+                        }
+                        return Lua.Return(ret.ToArray());
+                    }
+                }
+                else
+                    return Lua.Return();
+            }
+        }
+
+        public static bool TryGetFileObject(LuaObject obj, out FileObject file)
+        {
+            if (obj._luaObj is FileObject fileTemp)
+            {
+                file = fileTemp;
+                return true;
+            }
+
+            file = null;
+            return false;
+        }
+
+        LuaObject CreateFileObject(Stream stream)
+        {
+            LuaObject obj = LuaObject.FromObject(new FileObject(stream));
+            obj.SetMetaTable(_fileMetaTable, true);
+
+            return obj;
+        }
+
+        LuaArguments io_open(LuaArguments args)
         {
             var file = args[0];
             var mode = args[1];
 
             if (file.IsString)
             {
-                FileMode fmode = FileMode.Open;
-                FileAccess faccess = FileAccess.Read;
+                FileMode fMode = FileMode.Open;
+                FileAccess fAccess = FileAccess.Read;
                 if (mode.IsString)
                 {
-                    switch (mode.ToString())
+                    var modeStr = mode.ToString().TrimEnd('b');
+                    switch (modeStr)
                     {
                         case "r":
-                            faccess = FileAccess.Read; break;
-                        case "w":
-                            fmode = FileMode.Create; faccess = FileAccess.ReadWrite; break;
-                        case "a":
-                            fmode = FileMode.Append; faccess = FileAccess.Write; break;
+                            fAccess = FileAccess.Read; 
+                            break;
                         case "r+":
+                            fAccess = FileAccess.ReadWrite;
+                            break;
+                        case "w":
+                            fMode = FileMode.Create; 
+                            fAccess = FileAccess.Write;
+                            break;
                         case "w+":
+                            fMode = FileMode.Create;
+                            fAccess = FileAccess.ReadWrite;
+                            break;
+                        case "a":
+                            fMode = FileMode.Append;
+                            fAccess = FileAccess.Write;
+                            break;
                         case "a+":
-                            // TODO: Implement rwa+
-                            throw new NotImplementedException();
+                            fMode = FileMode.Append;
+                            fAccess = FileAccess.ReadWrite;
+                            break;
                     }
                 }
-                FileStream stream = new FileStream(file.ToString(), fmode, faccess);
+                var stream = new FileStream(file.ToString(), fMode, fAccess);
 
                 return Lua.Return(CreateFileObject(stream));
             }
@@ -118,212 +401,65 @@ namespace NetLua
                 return Lua.Return();
         }
 
+        LuaArguments io_tmpfile(LuaArguments args)
+        {
+            var path = Path.GetTempFileName();
+            var stream = new FileStream(path,
+                FileMode.Append, 
+                FileAccess.ReadWrite, 
+                FileShare.Write,
+                short.MaxValue, 
+                FileOptions.DeleteOnClose);
+            return Lua.Return(CreateFileObject(stream));
+        }
+
         static LuaArguments io_type(LuaArguments args)
         {
             var obj = args[0];
-            if (isStream(obj))
+            if (TryGetFileObject(obj, out var fObj))
             {
-                FileObject fobj = obj._luaObj as FileObject;
-                if (!fobj.stream.CanWrite && !fobj.stream.CanRead)
-                    return Lua.Return("closed file");
-                else
-                    return Lua.Return("file");
-            }
-            return Lua.Return();
-        }
-
-        static LuaArguments io_input(LuaArguments args)
-        {
-            var obj = args[0];
-            if (isStream(obj))
-            {
-                currentInput = obj;
-                return Lua.Return(currentInput);
-            }
-            else if (obj.IsString)
-            {
-                currentInput = io_open(args)[0];
-                return Lua.Return(currentInput);
-            }
-            else if (args.Length == 0)
-                return Lua.Return(currentInput);
-            else
-                throw new LuaException("Invalid argument");
-        }
-
-        static LuaArguments io_output(LuaArguments args)
-        {
-            var obj = args[0];
-            if (isStream(obj))
-            {
-                currentOutput = obj;
-                return Lua.Return(currentOutput);
-            }
-            else if (obj.IsString)
-            {
-                FileStream stream = new FileStream(obj.ToString(), FileMode.OpenOrCreate);
-                currentOutput = CreateFileObject(stream);
-                return Lua.Return(currentOutput);
-            }
-            else if (args.Length == 0)
-                return Lua.Return(currentOutput);
-            else
-                throw new LuaException("Invalid argument");
-        }
-
-        static LuaArguments io_temp(LuaArguments args)
-        {
-            string path = Path.GetTempFileName();
-            Stream s = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Write, Int16.MaxValue, FileOptions.DeleteOnClose);
-
-            return Lua.Return(CreateFileObject(s));
-        }
-
-        static LuaArguments io_write(LuaArguments args)
-        {
-            var obj = args[0];
-            if (!obj.IsNil)
-                return currentOutput["write"].MethodCall(currentOutput, args);
-            else
-                return Lua.Return();
-        }
-
-        static LuaArguments io_flush(LuaArguments args)
-        {
-            var obj = args[0];
-            if (obj.IsNil)
-                return currentOutput["flush"].MethodCall(currentOutput, args);
-            else
-                return obj["flush"].MethodCall(obj, args);
-        }
-
-        static LuaArguments io_close(LuaArguments args)
-        {
-            var obj = args[0];
-            if (obj.IsNil)
-                return currentOutput["close"].MethodCall(currentOutput, args);
-            else
-                return obj["close"].MethodCall(obj, args);
-        }
-
-        static LuaArguments io_read(LuaArguments args)
-        {
-            return currentInput["read"].MethodCall(currentInput, args);
-        }
-
-        static LuaArguments write(LuaArguments args)
-        {
-            var self = args[0];
-            if (isStream(self))
-            {
-                FileObject fobj = self._luaObj as FileObject;
-                foreach (var arg in args)
+                var stream = fObj.Stream ?? fObj.Reader.BaseStream ?? fObj.Writer.BaseStream;
+                if (fObj.Stream != null)
                 {
-                    if (arg == self)
-                        continue;
-
-                    if (!(arg.IsString || arg.IsNumber))
-                        Lua.Return();
-
-                    if (fobj.stream.CanWrite)
-                        fobj.writer.Write(arg.ToString());
+                    if (!stream.CanWrite && !stream.CanRead)
+                        return Lua.Return("closed file");
                     else
-                        Lua.Return();
-                }
-                return Lua.Return(self);
-            }
-            else
-                return Lua.Return();
-        }
-
-        static LuaArguments close(LuaArguments args)
-        {
-            var obj = args[0];
-            if (isStream(obj))
-            {
-                FileObject fobj = obj._luaObj as FileObject;
-                fobj.stream.Close();
-            }
-            return Lua.Return();
-        }
-
-        static LuaArguments flush(LuaArguments args)
-        {
-            var obj = args[0];
-            if (isStream(obj))
-            {
-                FileObject fobj = obj._luaObj as FileObject;
-                fobj.writer.Flush();
-            }
-            return Lua.Return();
-        }
-
-        static LuaArguments seek(LuaArguments args)
-        {
-            var obj = args[0];
-            var whence = args[1] | "cur";
-            var offset = args[2] | 0;
-
-            if (isStream(obj))
-            {
-                var fobj = obj._luaObj as FileObject;
-                switch (whence.ToString())
-                {
-                    case "cur":
-                        fobj.stream.Position += (long)offset; break;
-                    case "set":
-                        fobj.stream.Position = (long)offset; break;
-                    case "end":
-                        fobj.stream.Position = fobj.stream.Length + (long)offset; break;
-                }
-                return Lua.Return(fobj.stream.Position);
-            }
-            return Lua.Return();
-        }
-
-        static LuaArguments read(LuaArguments args)
-        {
-            var self = args[0];
-            if (isStream(self))
-            {
-                var fobj = self._luaObj as FileObject;
-                if (args.Length == 1)
-                {
-                    var line = fobj.reader.ReadLine();
-
-                    return Lua.Return(line);
-                }
-                else
-                {
-                    List<LuaObject> ret = new List<LuaObject>();
-                    foreach (var arg in args)
-                    {
-                        if (arg == self)
-                            continue;
-                        if (arg.IsNumber)
-                        {
-                            StringBuilder bld = new StringBuilder();
-                            for (int i = 0; i < arg; i++)
-                            {
-                                bld.Append((char)fobj.reader.Read());
-                            }
-                            ret.Add(bld.ToString());
-                        }
-                        else if (arg == "*a")
-                            ret.Add(fobj.reader.ReadToEnd());
-                        else if (arg == "*l")
-                            ret.Add(fobj.reader.ReadLine());
-                        else if (arg == "*n")
-                        {
-                            //TODO: Implement io.read("*n")
-                            throw new NotImplementedException();
-                        }
-                    }
-                    return Lua.Return(ret.ToArray());
+                        return Lua.Return("file");
                 }
             }
-            else
-                return Lua.Return();
+            return Lua.Return("fail");
+        }
+
+        LuaArguments io_popen(LuaArguments args)
+        {
+            GuardLibrary.HasLengthAtLeast(args, 1, "popen");
+            GuardLibrary.EnsureType(args, 0, LuaType.@string, "popen");
+            var prog = args[0].AsString();
+            var process = Process.Start(prog);
+
+            var modeStr = "r";
+            if (args.Length > 1)
+            {
+                GuardLibrary.EnsureType(args, 1, LuaType.@string, "popen");
+                modeStr = args[1].AsString();
+            }
+            FileObject file = null;
+            switch (modeStr)
+            {
+                case "r":
+                    file = new FileObject(process.StandardOutput, null);
+                    break;
+                case "w":
+                    file = new FileObject(null, process.StandardInput);
+                    break;
+            }
+            if (file == null)
+            {
+                GuardLibrary.ArgumentError(2, "popen", "invalid file mode");
+            }
+            var obj = LuaObject.FromObject(file);
+            obj.SetMetaTable(_fileMetaTable, true);
+            return Lua.Return(obj);
         }
     }
 }
