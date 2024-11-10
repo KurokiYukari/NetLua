@@ -396,13 +396,13 @@ namespace NetLua
             return false;
         }
 
-        public long? AsInt()
+        public long AsInt()
         {
             if (TryConvertToInt(out var value))
             {
                 return value;
             }
-            return null;
+            throw new LuaException($"Cannot convert to integer number. Type: {Type}, Value: {_luaObj}");
         }
         #endregion
 
@@ -435,7 +435,18 @@ namespace NetLua
 
         public string AsString()
         {
-            return _luaObj.ToString();
+            return _luaObj?.ToString();
+        }
+
+        public bool TryConvertToString(out string value)
+        {
+            if (IsString || IsNumber)
+            {
+                value = AsString();
+                return true;
+            }
+            value = null;
+            return false;
         }
         #endregion
 
@@ -484,13 +495,9 @@ namespace NetLua
         /// Creates and initializes a Lua object with a table value
         /// </summary>
         /// <param name="initItems">The initial items of the table to create</param>
-        public static LuaObject NewTable(params LuaTableItem[] initItems)
+        public static LuaObject NewTable()
         {
             var table = FromTable(new LuaTableImpl());
-
-            foreach (var item in initItems)
-                table[item.Key] = item.Value;
-
             return table;
         }
 
@@ -556,6 +563,7 @@ namespace NetLua
                 if (!handler.IsNil)
                     return handler.Call(this)[0];
                 else if (IsTable)
+                // TODO: support list count
                     return AsTable().Count;
                 else
                     throw new LuaException("Invalid op");
@@ -1062,6 +1070,17 @@ namespace NetLua
                 else
                     handler[key] = value;
             }
+        }
+
+        public LuaObject GetOrSet(string key, Func<LuaObject> creator)
+        {
+            var result = this[key];
+            if (result.IsNil)
+            {
+                result = creator();
+                this[key] = result;
+            }
+            return result;
         }
 
         // Unlike AsString, this will return string representations of nil, tables, and functions

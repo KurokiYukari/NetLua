@@ -112,7 +112,7 @@ namespace NetLua
             var y = GuardLibrary.EnsureNumber(args, 1, nameof(fmod));
             if (y == 0)
             {
-                GuardLibrary.ArgumentError(2, nameof(fmod), "zero");
+                GuardLibrary.ArgumentError(2, "zero", nameof(fmod));
             }
             var factor = (int)(x / y);
             return Lua.Return(x - factor * y);

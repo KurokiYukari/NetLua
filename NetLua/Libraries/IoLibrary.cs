@@ -455,7 +455,7 @@ namespace NetLua
             }
             if (file == null)
             {
-                GuardLibrary.ArgumentError(2, "popen", "invalid file mode");
+                GuardLibrary.ArgumentError(2, "invalid file mode", "popen");
             }
             var obj = LuaObject.FromObject(file);
             obj.SetMetaTable(_fileMetaTable, true);

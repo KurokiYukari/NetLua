@@ -13,6 +13,7 @@ namespace NetLua
     public class BasicLibrary : ILuaLibrary
     {
         public const string _VERSION = "Lua 5.4";
+        public const string _ENV_SUFFIX_VERSION = "5_4";
 
         public static BasicLibrary Instance { get; } = new BasicLibrary();
 
@@ -137,7 +138,7 @@ namespace NetLua
                         }
                         else
                         {
-                            GuardLibrary.ArgumentError(2, "tonumber", GuardLibrary.NOT_INT_NUMBER);
+                            GuardLibrary.ArgumentError(2, GuardLibrary.NOT_INT_NUMBER, "tonumber");
                             return Lua.Return();
                         }
                     }
@@ -459,7 +460,7 @@ namespace NetLua
                     var intIndex = (int)longIndex;
                     if (intIndex == 0 || index > args.Length || index < -args.Length)
                     {
-                        GuardLibrary.ArgumentError(1, "select", GuardLibrary.INDEX_OUT_OF_RANGE);
+                        GuardLibrary.ArgumentError(1, GuardLibrary.INDEX_OUT_OF_RANGE, "select");
                         return Lua.Return();
                     }
                     else if (intIndex > 0)
@@ -473,7 +474,7 @@ namespace NetLua
                 }
                 else
                 {
-                    GuardLibrary.ArgumentError(1, "select", GuardLibrary.NOT_INT_NUMBER);
+                    GuardLibrary.ArgumentError(1, GuardLibrary.NOT_INT_NUMBER, "select");
                     return Lua.Return();
                 }
             }
@@ -556,7 +557,7 @@ namespace NetLua
                 }
                 else
                 {
-                    GuardLibrary.ArgumentError(2, "tonumber", "base out of range");
+                    GuardLibrary.ArgumentError(2, "base out of range", "tonumber");
                     return 0;
                 }
             }

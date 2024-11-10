@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace NetLua
@@ -21,7 +22,7 @@ namespace NetLua
         }
 
         [DoesNotReturn]
-        public static void ArgumentError(int index, string name, string message)
+        public static void ArgumentError(int index, string message, string name)
         {
             BasicLibrary.Error($"bad argument #{index} to '{name}' ({message})");
         }
@@ -42,7 +43,28 @@ namespace NetLua
         [DoesNotReturn]
         public static void ArgumentTypeError(LuaArguments args, int index, string type, string name)
         {
-            ArgumentError(index + 1, name, $"{type} excepted, got {args[index].Type}");
+            ArgumentError(index + 1, $"{type} excepted, got {args[index].Type}", name);
+        }
+
+        public static IDictionary<LuaObject, LuaObject> EnsureTable(LuaArguments args, int index, string name)
+        {
+            var arg = args[index];
+            if (!arg.IsTable)
+            {
+                ArgumentTypeError(args, index, LuaType.table.ToString(), name);
+            }
+
+            return arg.AsTable();
+        }
+
+        public static IDictionary<LuaObject, LuaObject> EnsureTable(LuaObject arg, int index, string name)
+        {
+            if (!arg.IsTable)
+            {
+                ArgumentError(index + 1, $"table excepted, got {arg.Type}", name);
+            }
+
+            return arg.AsTable();
         }
 
         public static double EnsureNumber(LuaArguments args, int index, string name)
@@ -53,7 +75,7 @@ namespace NetLua
                 return value;
             }
 
-            ArgumentError(index + 1, name, $"number expected, got {arg.Type}");
+            ArgumentTypeError(args, index, LuaType.number.ToString(), name);
             return 0;
         }
 
@@ -65,8 +87,27 @@ namespace NetLua
                 return value;
             }
 
-            ArgumentError(index + 1, name, $"number expected, got {arg.Type}");
+            if (arg.IsNumber)
+            {
+                ArgumentError(index + 1, NOT_INT_NUMBER, name);
+            }
+            else
+            {
+                ArgumentTypeError(args, index, LuaType.number.ToString(), name);
+            }
             return 0;
+        }
+
+        public static string EnsureString(LuaArguments args, int index, string name)
+        {
+            var arg = args[index];
+            if (arg.TryConvertToString(out var value))
+            {
+                return value;
+            }
+
+            ArgumentTypeError(args, index, LuaType.@string.ToString(), name);
+            return "";
         }
     }
 }

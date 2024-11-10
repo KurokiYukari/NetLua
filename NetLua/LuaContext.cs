@@ -21,6 +21,7 @@ namespace NetLua
     {
         const string _ENV = "_ENV";
 
+        string _executionDir = null;
         readonly Func<Parser> _parserGetter;
         readonly LuaContext _parent;
         readonly IDictionary<string, LuaObject> _variables;
@@ -73,6 +74,45 @@ namespace NetLua
         /// </summary>
         public LuaContext() : this(null) { }
 
+        public bool TryGetExecutionDir(out string executionDir)
+        {
+            executionDir = _executionDir;
+            if (executionDir != null)
+            {
+                return true; 
+            }
+
+            if (_parent != null && _parent.TryGetExecutionDir(out executionDir))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public string GetFullPath(string filename, bool setExecutionDir)
+        {
+            if (TryGetExecutionDir(out var executionDir))
+            {
+                filename = Path.Combine(executionDir, filename);
+            }
+            else
+            {
+                filename = Path.GetFullPath(filename);
+                if (setExecutionDir)
+                {
+                    executionDir = Path.GetDirectoryName(filename);
+                    var current = this;
+                    while (current != null)
+                    {
+                        current._executionDir = executionDir;
+                        current = current._parent;
+                    }
+                }
+            }
+            return filename;
+        }
+
         /// <summary>
         /// Sets or creates a variable in the local scope
         /// </summary>
@@ -104,6 +144,17 @@ namespace NetLua
                 return env[name];
             }
             return LuaObject.Nil;
+        }
+
+        public LuaObject GetOrSet(string name, Func<LuaObject> creator)
+        {
+            var result = Get(name);
+            if (result.IsNil)
+            {
+                result = creator();
+                Set(name, result);
+            }
+            return result;
         }
 
         public bool TryGetLocal(string name, out LuaObject value)
@@ -148,6 +199,7 @@ namespace NetLua
         /// <param name="filename">The file to execute</param>
         public LuaArguments DoFile(string filename)
         {
+            filename = GetFullPath(filename, true);
             var source = File.ReadAllText(filename);
             return DoString(source, filename);
         }
