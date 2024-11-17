@@ -10,11 +10,10 @@ using System.Threading;
 
 using System.Dynamic;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace NetLua
 {
-    using LuaTable = IDictionary<LuaObject, LuaObject>;
-    using LuaTableImpl = Dictionary<LuaObject, LuaObject>;
     using LuaTableItem = KeyValuePair<LuaObject, LuaObject>;
 
     /// <summary>
@@ -166,7 +165,7 @@ namespace NetLua
         IComparable
     {
         internal object _luaObj;
-        internal LuaType type;
+        private LuaType type;
         private LuaObject _metaTable = Nil;
 
         public LuaObject()
@@ -240,7 +239,7 @@ namespace NetLua
             {if (obj is bool v) return FromBool(v);}
             {if (obj is string v) return FromString(v);}
             {if (obj is LuaFunction v) return FromFunction(v);}
-            {if (obj is LuaTable v) return FromTable(v);}
+            {if (obj is ILuaTable v) return FromTable(v);}
             {if (obj is double v) return FromNumber(v);}
             {if (obj is float v) return FromNumber(v);}
             {if (obj is int v) return FromNumber(v);}
@@ -345,10 +344,10 @@ namespace NetLua
         /// </summary>
         public double AsNumber()
         {
-            return (double)_luaObj;
+            return (double)Convert.ChangeType(_luaObj, typeof(double));
         }
 
-        public long AsIntNumber()
+        public long AsLongNumber()
         {
             return (long)Convert.ChangeType(_luaObj, typeof(long));
         }
@@ -374,7 +373,7 @@ namespace NetLua
             }
         }
 
-        public bool TryConvertToInt(out long value)
+        public bool TryConvertToLong(out long value)
         {
             if (IsNumber)
             {
@@ -396,9 +395,16 @@ namespace NetLua
             return false;
         }
 
+        public bool TryConvertToInt(out int value)
+        {
+            var result = TryConvertToLong(out long longValue);
+            value = (int)longValue;
+            return result;
+        }
+
         public long AsInt()
         {
-            if (TryConvertToInt(out var value))
+            if (TryConvertToLong(out long value))
             {
                 return value;
             }
@@ -483,7 +489,7 @@ namespace NetLua
         /// <summary>
         /// Creates a Lua object from a Lua table
         /// </summary>
-        public static LuaObject FromTable(LuaTable table)
+        public static LuaObject FromTable(ILuaTable table)
         {
             if (table == null)
                 return Nil;
@@ -497,15 +503,15 @@ namespace NetLua
         /// <param name="initItems">The initial items of the table to create</param>
         public static LuaObject NewTable()
         {
-            var table = FromTable(new LuaTableImpl());
+            var table = FromTable(new LuaTable());
             return table;
         }
 
         public bool IsTable { get { return type == LuaType.table; } }
 
-        public LuaTable AsTable()
+        public ILuaTable AsTable()
         {
-            return _luaObj as LuaTable;
+            return _luaObj as ILuaTable;
         }
         #endregion
 
@@ -563,8 +569,7 @@ namespace NetLua
                 if (!handler.IsNil)
                     return handler.Call(this)[0];
                 else if (IsTable)
-                // TODO: support list count
-                    return AsTable().Count;
+                    return AsTable().List.Count;
                 else
                     throw new LuaException("Invalid op");
             }
@@ -738,8 +743,8 @@ namespace NetLua
 
         private bool BitwiseAnd(LuaObject op, out LuaObject result)
         {
-            if (TryConvertToInt(out long value1) &&
-                op.TryConvertToInt(out long value2))
+            if (TryConvertToLong(out long value1) &&
+                op.TryConvertToLong(out long value2))
             {
                 result = FromNumber(value1 & value2);
                 return true;
@@ -787,8 +792,8 @@ namespace NetLua
 
         private bool BitwiseOr(LuaObject op, out LuaObject result)
         {
-            if (TryConvertToInt(out long value1) &&
-                op.TryConvertToInt(out long value2))
+            if (TryConvertToLong(out long value1) &&
+                op.TryConvertToLong(out long value2))
             {
                 result = FromNumber(value1 | value2);
                 return true;
@@ -836,8 +841,8 @@ namespace NetLua
 
         public LuaObject BitwiseXor(LuaObject op)
         {
-            if (TryConvertToInt(out long value1) &&
-                op.TryConvertToInt(out long value2))
+            if (TryConvertToLong(out long value1) &&
+                op.TryConvertToLong(out long value2))
             {
                 return FromNumber(value1 ^ value2);
             }
@@ -858,7 +863,7 @@ namespace NetLua
 
         public LuaObject BitwiseNot()
         {
-            if (TryConvertToInt(out long value))
+            if (TryConvertToLong(out long value))
             {
                 return FromNumber(~value);
             }
@@ -879,10 +884,10 @@ namespace NetLua
 
         public LuaObject ShiftLeft(LuaObject op)
         {
-            if (TryConvertToInt(out long value1) &&
-                op.TryConvertToInt(out long value2))
+            if (TryConvertToLong(out long value1) &&
+                op.TryConvertToInt(out int value2))
             {
-                return FromNumber(value1 << (int)value2);
+                return FromNumber(value1 << value2);
             }
             else
             {
@@ -896,10 +901,10 @@ namespace NetLua
 
         public LuaObject ShiftRight(LuaObject op)
         {
-            if (TryConvertToInt(out long value1) &&
-                op.TryConvertToInt(out long value2))
+            if (TryConvertToLong(out long value1) &&
+                op.TryConvertToInt(out int value2))
             {
-                return FromNumber(value1 >> (int)value2);
+                return FromNumber(value1 >> value2);
             }
             else
             {

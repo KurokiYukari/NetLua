@@ -95,6 +95,7 @@ namespace NetLua
         static readonly MethodInfo LuaObject_Len = ((Func<LuaObject>)LuaObject.Nil.Len).Method;
         static readonly MethodInfo LuaObject_Call = ((Func<LuaArguments, LuaArguments>)LuaObject.Nil.Call).Method;
         static readonly MethodInfo LuaObject_AsBool = ((Func<bool>)LuaObject.Nil.AsBool).Method;
+        static readonly MethodInfo LuaObject_FromDouble = ((Func<double, LuaObject>)LuaObject.FromNumber).Method;
 
         static readonly LuaArguments VoidArguments = new LuaArguments();
 
@@ -294,7 +295,7 @@ namespace NetLua
             var values = new List<KeyValuePair<Expression, Expression>>();
             int i = 0;
             var exprs = new List<Expression>();
-            var type = typeof(Dictionary<LuaObject, LuaObject>);
+            var type = typeof(LuaTable);
             var add = type.GetMethod("Add", new[] { LuaObject_Type, LuaObject_Type });
             var variable = Expression.Parameter(type);
             var assign = Expression.Assign(variable, Expression.New(type.GetConstructor(new Type[] { })));
@@ -318,7 +319,7 @@ namespace NetLua
                     var loopCondition = Expression.LessThan(counter, Expression.Property(v, "Length"));
                     var addValue = Expression.Call(variable, add,
                         Expression.Add(k,
-                            Expression.Call(LuaObject_Type.GetMethod("FromNumber"),
+                            Expression.Call(LuaObject_FromDouble,
                                 Expression.Convert(counter, typeof(double) ) ) ),
                         Expression.Property(value, "Item", counter) );
 

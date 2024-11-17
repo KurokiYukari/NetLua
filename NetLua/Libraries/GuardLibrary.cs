@@ -46,7 +46,7 @@ namespace NetLua
             ArgumentError(index + 1, $"{type} excepted, got {args[index].Type}", name);
         }
 
-        public static IDictionary<LuaObject, LuaObject> EnsureTable(LuaArguments args, int index, string name)
+        public static ILuaTable EnsureTable(LuaArguments args, int index, string name)
         {
             var arg = args[index];
             if (!arg.IsTable)
@@ -57,7 +57,7 @@ namespace NetLua
             return arg.AsTable();
         }
 
-        public static IDictionary<LuaObject, LuaObject> EnsureTable(LuaObject arg, int index, string name)
+        public static ILuaTable EnsureTable(LuaObject arg, int index, string name)
         {
             if (!arg.IsTable)
             {
@@ -79,7 +79,7 @@ namespace NetLua
             return 0;
         }
 
-        public static long EnsureIntNumber(LuaArguments args, int index, string name)
+        public static int EnsureIntNumber(LuaArguments args, int index, string name)
         {
             var arg = args[index];
             if (arg.TryConvertToInt(out var value))

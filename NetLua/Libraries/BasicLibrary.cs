@@ -455,9 +455,8 @@ namespace NetLua
         {
             if (index.IsNumber)
             {
-                if (index.TryConvertToInt(out long longIndex))
+                if (index.TryConvertToInt(out int intIndex))
                 {
-                    var intIndex = (int)longIndex;
                     if (intIndex == 0 || index > args.Length || index < -args.Length)
                     {
                         GuardLibrary.ArgumentError(1, GuardLibrary.INDEX_OUT_OF_RANGE, "select");

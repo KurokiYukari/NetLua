@@ -1,15 +1,72 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace NetLua
 {
+    internal static class RandomHelper
+    {
+        #if !NET6_0_OR_GREATER
+        public static long NextInt64(this Random random, long min, long max)
+        {
+            Span<byte> bytes = stackalloc byte[8];
+            random.NextBytes(bytes);
+            ulong offset = BitConverter.ToUInt64(bytes);
+
+            ulong range = (ulong)max;
+            if (min < 0)
+            {
+                range += (ulong)-min;
+            }
+            else
+            {
+                range -= (ulong)min;
+            }
+
+            offset %= range;
+            if (offset > long.MaxValue)
+            {
+                Debug.Assert(min < 0);
+                return (long)(offset -= (ulong)-min);
+            }
+            else
+            {
+                return min + (long)offset;
+            }
+        }
+
+        public static long NextInt64(this Random random)
+        {
+            return random.NextInt64(long.MinValue, long.MaxValue);
+        }
+        #endif
+    }
+
     public class MathLibrary : ILuaLibrary
     {
-        private Random _random = Random.Shared;
+        #if !NET6_0_OR_GREATER
+        private readonly Random _sharedRandom = new Random();
+        #endif
+
+        private Random _random;
 
         public static MathLibrary Instance { get; } = new MathLibrary();
+
+        public MathLibrary()
+        {
+            _random = GetSharedRandom();
+        }
+
+        private Random GetSharedRandom()
+        {
+            #if !NET6_0_OR_GREATER
+            return _sharedRandom;
+            #else
+            return Random.Shared;
+            #endif
+        }
 
         public void AddLibrary(LuaContext Context)
         {
@@ -167,7 +224,7 @@ namespace NetLua
             var random = _random;
             if (args.Length == 0)
             {
-                return Lua.Return(Random.Shared.NextDouble());
+                return Lua.Return(random.NextDouble());
             }
             var m = GuardLibrary.EnsureIntNumber(args, 0, nameof(random));
             if (args.Length == 1)
@@ -193,7 +250,7 @@ namespace NetLua
             Random random;
             if (args.Length == 0)
             {
-                random = Random.Shared;
+                random = GetSharedRandom();
             }
             else if (args.Length == 1)
             {
@@ -233,7 +290,7 @@ namespace NetLua
         static LuaArguments tointeger(LuaArguments args)
         {
             GuardLibrary.HasLengthAtLeast(args, 1, nameof(tointeger));
-            if (args[0].TryConvertToInt(out var i))
+            if (args[0].TryConvertToLong(out long i))
             {
                 return Lua.Return(LuaObject.FromNumber(i));
             }
@@ -249,7 +306,7 @@ namespace NetLua
         {
             GuardLibrary.HasLengthAtLeast(args, 1, nameof(type));
             var x = args[0];
-            if (x.type == LuaType.number)
+            if (x.Type == LuaType.number)
             {
                 if (x._luaObj is long)
                 {

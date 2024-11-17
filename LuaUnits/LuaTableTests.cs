@@ -30,7 +30,7 @@ a[20] = 'great'");
             lua.DoString("k = 20");
             obj1 = "great";
             obj2 = lua.DoString("return a[k]")[0];
-            Assert.IsTrue(obj1.Equals(obj2));
+            Assert.That(obj1, Is.EqualTo(obj2));
         }
 
         [Test]
