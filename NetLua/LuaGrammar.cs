@@ -26,8 +26,8 @@ namespace NetLua
                 DefaultIntTypes = new TypeCode[] { TypeCode.Int32, TypeCode.Int64 },
             };
 
-            Terminal LineComment = new CommentTerminal("Comment", "--", "\n", "\r");
             Terminal LongComment = new CommentTerminal("LongComment", "--[[", "]]");
+            Terminal LineComment = new CommentTerminal("Comment", "--", "\n", "\r");
 
             base.NonGrammarTerminals.Add(LineComment);
             base.NonGrammarTerminals.Add(LongComment);
