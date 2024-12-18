@@ -81,8 +81,13 @@ namespace NetLua
 
         public static int EnsureIntNumber(LuaArguments args, int index, string name)
         {
+            return (int)EnsureLongNumber(args, index, name);
+        }
+
+        public static long EnsureLongNumber(LuaArguments args, int index, string name)
+        {
             var arg = args[index];
-            if (arg.TryConvertToInt(out var value))
+            if (arg.TryConvertToLong(out var value))
             {
                 return value;
             }

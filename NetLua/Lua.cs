@@ -39,6 +39,7 @@ namespace NetLua
             PackageLibrary.Instance.AddLibrary(context);
             TableLibrary.Instance.AddLibrary(context);
             StringLibrary.Instance.AddLibrary(context);
+            new OsLibrary().AddLibrary(context);
             return context;
         }
     }
